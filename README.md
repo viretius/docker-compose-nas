@@ -1,6 +1,6 @@
 # Docker Compose NAS
 
-(Use Windscribe instead of PIA)
+(Use ProtonVPN instead of PIA)
 
 After searching for the perfect NAS solution, I realized what I wanted could be achieved
 with some Docker containers on a vanilla Linux box. The result is an opinionated Docker Compose configuration capable of
