@@ -1,6 +1,7 @@
 *.env
 .idea
 docker-compose.override.yml
+/secrets
 /homepage/logs
 /homepage/*.yaml
 /homepage/*.css
