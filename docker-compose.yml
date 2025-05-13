@@ -295,6 +295,8 @@ services:
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
+    ports:
+      - "9696:9696"
     security_opt:
       - no-new-privileges:true
     network_mode: "service:vpn"
@@ -314,7 +316,7 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
-      - traefik.http.routers.prowlarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/prowlarr`))
+      - traefik.http.routers.prowlarr.rule=Host(`prowlarr.$HOSTNAME`)"
       - traefik.http.routers.prowlarr.tls=true
       - traefik.http.routers.prowlarr.tls.certresolver=myresolver
       - traefik.http.services.prowlarr.loadbalancer.server.port=9696
@@ -379,14 +381,7 @@ services:
       - traefik.http.routers.qbittorrent.tls=true
       - traefik.http.routers.qbittorrent.tls.certresolver=myresolver
       - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
-      - traefik.http.routers.qbittorrent.middlewares=qbittorrent-strip-slash,qbittorrent-stripprefix
-      # https://github.com/qbittorrent/qBittorrent/issues/5693#issuecomment-552146296
-      - traefik.http.middlewares.qbittorrent-stripprefix.stripPrefix.prefixes=/qbittorrent
-      # https://community.traefik.io/t/middleware-to-add-the-if-needed/1895/19
-      - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.regex=(^.*\/qbittorrent$$)
-      - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.replacement=$$1/
-      - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.permanent=false
-      #- com.centurylinklabs.watchtower.depends-on=/vpn
+     #- com.centurylinklabs.watchtower.depends-on=/vpn
       - homepage.group=Download
       - homepage.name=qBittorrent
       - homepage.icon=qbittorrent.png
@@ -427,6 +422,14 @@ services:
       - net.ipv6.conf.all.disable_ipv6=1
       - net.ipv6.conf.lo.disable_ipv6=1
     labels:
+<<<<<<< HEAD
+      - traefik.enable=true"
+      - traefik.http.routers.qbittorrent.entrypoints=websecure
+      - traefik.http.routers.qbittorrent.rule=Host(`qbit.$HOSTNAME)
+      - traefik.http.routers.qbittorrent.tls=true
+      - traefik.http.routers.qbittorrent.tls.certresolver=myresolver
+      - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
+=======
       - traefik.enable=true
       - traefik.http.routers.vpn.entrypoints=websecure
       - traefik.http.routers.vpn.rule=(Host(`${VPN_HOSTNAME}`))
@@ -437,6 +440,7 @@ services:
       - "traefik.http.routers.gluetun-qbittorrent.service=gluetun-svc" # qBittorrent
       - "traefik.http.services.gluetun-svc.loadbalancer.server.port=8080" # qBittorrent
  
+>>>>>>> 6d8f75f02b06f589bb780f9ac16ebc52a1fd04e1
       - homepage.group=Media
       - homepage.name=JellySeerr
       - homepage.icon=jellyseerr.png
