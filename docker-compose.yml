@@ -1,3 +1,5 @@
+#https://github.com/anujdatar/porkbun-ddns/tree/main porkbun ddns
+
 services:
   # Docker Socket Proxy - Security Enchanced Proxy for Docker Socket
   socket-proxy:
@@ -62,20 +64,20 @@ services:
       - CLOUDFLARE_ZONE_API_TOKEN_FILE=/run/secrets/cloudflare_zone_api_token
       - LETS_ENCRYPT_EMAIL=${LETS_ENCRYPT_EMAIL}
     command:
+      - --api=true
       - --ping=true
       - --providers.docker=true
-      - --api=true
       - --api.dashboard=true
-      - --api.insecure=true
+      - --serversTransport.insecureSkipVerify=true
+      - --traefik.http.routers.api.rule=Host(`traefik.$HOSTNAME`)"
+      - --traefik.http.routers.api.service=api@internal"
+      - --traefik.http.routers.api.entrypoints=traefik"
       - --providers.docker.exposedbydefault=false
       - --providers.docker.endpoint=tcp://socket-proxy:2375 # Enable for Socket Proxy. Disable otherwise.
-      - --providers.docker.exposedByDefault=false
-      - --providers.docker.network=reverse_proxy # 
-      - --providers.docker.swarmMode=false
-      - --entrypoints.web-secure.http.tls=true
-      - --entrypoints.web-secure.http.tls.options=tls-opts@file #
+      - --providers.docker.network=reverse_proxy # Traefik searches for container labels only in the specified network
       - --entrypoints.web.address=:80
       - --entrypoints.web-secure.address=:443
+      - --entrypoints.traefik.address=:8080
       - --entrypoints.web.http.redirections.entryPoint.to=web-secure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --entrypoints.web.http.redirections.entrypoint.permanent=true
@@ -90,11 +92,12 @@ services:
       - --certificatesresolvers.myresolver.acme.email=${LETS_ENCRYPT_EMAIL}
       - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
     labels:
-      #- "autoheal=true"
       - "traefik.enable=true"
-      # HTTP Routers
+      # HTTP Router for the dashboard
       - "traefik.http.routers.traefik-rtr.entrypoints=https"
       - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.$DOMAINNAME_DNS` )"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+      - "traefik.docker.network=proxy"
       # Services - API
       - "traefik.http.routers.traefik-rtr.service=api@internal"
     networks:
@@ -110,6 +113,7 @@ services:
         published: 443
         protocol: tcp
         mode: host
+      - 8080:8080 #dashboard
     volumes:
       - ${CONFIG_ROOT:-.}/letsencrypt:/letsencrypt
       - ${CONFIG_ROOT:-.}/traefik/acme/acme.json:/acme.json # Certs File 
@@ -120,6 +124,7 @@ services:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
       retries: 10
+  
   sonarr:
     image: lscr.io/linuxserver/sonarr
     container_name: sonarr
@@ -139,7 +144,7 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
-      - traefik.http.routers.sonarr.rule=(Host(`${HOSTNAME}`))
+      - traefik.http.routers.sonarr.rule=Host(`sonarr.$HOSTNAME`)
       - traefik.http.routers.sonarr.tls=true
       - traefik.http.routers.sonarr.tls.certresolver=myresolver
       - traefik.http.services.sonarr.loadbalancer.server.port=8989
@@ -150,7 +155,7 @@ services:
       - homepage.description=Series management
       - homepage.weight=0
       - homepage.widget.type=sonarr
-      - homepage.widget.url=http://sonarr:8989/sonarr
+      - homepage.widget.url=http://sonarr:8989/
       - homepage.widget.key=${SONARR_API_KEY}
   radarr:
     image: lscr.io/linuxserver/radarr
@@ -171,19 +176,19 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
-      - traefik.http.routers.radarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/radarr`))
+      - traefik.http.routers.radarr.rule=Host(`radarr.$HOSTNAME`)
       - traefik.http.routers.radarr.tls=true
       - traefik.http.routers.radarr.tls.certresolver=myresolver
       - traefik.http.services.radarr.loadbalancer.server.port=7878
       - homepage.group=Media
-      - homepage.name=Radarr
+      - homepage.name=radarr
       - homepage.icon=radarr.png
       - homepage.href=/radarr
-      - homepage.description=Movies management
-      - homepage.weight=1
+      - homepage.description=Series management
+      - homepage.weight=0
       - homepage.widget.type=radarr
-      - homepage.widget.url=http://radarr:7878/radarr
-      - homepage.widget.key=${RADARR_API_KEY}
+      - homepage.widget.url=http://radarr:7878/
+      - homepage.widget.key=${radarr_API_KEY}
   lidarr:
     image: lscr.io/linuxserver/lidarr
     container_name: lidarr
@@ -292,6 +297,10 @@ services:
     container_name: prowlarr
     security_opt:
       - no-new-privileges:true
+    network_mode: "service:vpn"
+    depends_on:
+      vpn:
+        condition: service_healthy
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
@@ -339,6 +348,8 @@ services:
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:libtorrentv1
     container_name: qbittorrent
+  # ports:
+  #   - "8081:8080" # Explosed via gluetun. 8081 because traefik-dashboard is using port 8080
     security_opt:
       - no-new-privileges:true
     environment:
@@ -386,11 +397,15 @@ services:
       - homepage.widget.url=http://vpn:8080
       - homepage.widget.username=${QBITTORRENT_USERNAME}
       - homepage.widget.password=${QBITTORRENT_PASSWORD}
-  vpn:
+  gluetun:
     image: qmcgaw/gluetun:v3
     container_name: gluetun
+    security_opt:
+      - no-new-privileges:true
     cap_add:
       - NET_ADMIN
+    networks:
+      - reverse-proxy
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
@@ -398,14 +413,12 @@ services:
       - 8388:8388/tcp # Shadowsocks
       - 8388:8388/udp # Shadowsocks
       - 8003:8000/tcp # Admin
-      #- 8080:8080/tcp # gluetun
-      #- 8081:8081/tcp # gluetun
+      - 8081:8080     # Exposing qBittorrent through Docker Host LAN IP
     environment:
       - VPN_SERVICE_PROVIDER=${VPN_SERVICE}
-      - VPN_TYPE=openvpn
+      - VPN_TYPE=wireguard
       - OPENVPN_USER=${VPN_USER}
       - OPENVPN_PASSWORD=${VPN_PASSWORD}
-      - OPENVPN_CIPHERS=AES-256-GCM
       - PORT_FORWARD_ONLY=on
       - VPN_PORT_FORWARDING=on
     sysctls:
@@ -415,10 +428,15 @@ services:
       - net.ipv6.conf.lo.disable_ipv6=1
     labels:
       - traefik.enable=true
+      - traefik.http.routers.vpn.entrypoints=websecure
       - traefik.http.routers.vpn.rule=(Host(`${VPN_HOSTNAME}`))
       - traefik.http.routers.vpn.tls=true
       - traefik.http.routers.vpn.tls.certresolver=myresolver
       - traefik.http.services.vpn.loadbalancer.server.port=5055
+            # HTTP Services
+      - "traefik.http.routers.gluetun-qbittorrent.service=gluetun-svc" # qBittorrent
+      - "traefik.http.services.gluetun-svc.loadbalancer.server.port=8080" # qBittorrent
+ 
       - homepage.group=Media
       - homepage.name=JellySeerr
       - homepage.icon=jellyseerr.png
@@ -447,8 +465,7 @@ services:
       - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
       - UN_RADARR_0_URL=http://radarr:7878/radarr
       - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
-    security_opt:
-      - no-new-privileges:true
+
   sabnzbd:
     image: lscr.io/linuxserver/sabnzbd:latest
     container_name: sabnzbd
@@ -650,11 +667,7 @@ networks:
       config:
         - subnet: 192.168.91.0/24
   reverse_proxy:
-    name: reverse_proxy
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.90.0/24
+    external: true
 
 secrets:
   cloudflare_email:
