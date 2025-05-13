@@ -409,6 +409,9 @@ services:
       - net.ipv6.conf.default.disable_ipv6=1
       - net.ipv6.conf.all.disable_ipv6=1
       - net.ipv6.conf.lo.disable_ipv6=1
+    #https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md
+    command: 
+      - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data "json={\"listen_port\":{{PORTS}}}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'
     labels:
       - traefik.enable=true"
       - traefik.http.routers.qbittorrent.entrypoints=websecure
@@ -422,21 +425,6 @@ services:
       timeout: 10s
       retries: 3
     restart: always    
-
-  gluetun-qbittorrent-port-manager:
-    image: patrickaclark/gluetun-qbittorrent-port-manager:latest
-    restart: unless-stopped
-    container_name: gt-port-manager
-    network_mode: "service:gluetun"
-    environment:
-      - QBITTORRENT_SERVER=localhost  # IP Address of qbittorrent
-      - QBITTORRENT_PORT=8080
-      - HTTP_S=https                   # Select 'http' or 'https'
-      - GLUETUN_HOST=localhost        # IP or FQDN of gluetun control server
-      - GLUETUN_PORT=8000             # port of gluetun control server
-      - RECHECK_TIME=60               # number of seconds between checks
-      - PORT_FORWARDED=/tmp/gluetun/forwarded_port #  will be deprecated in v4.0.0 release)
-      - TZ=${TIMEZONE}
 
   unpackerr:
     image: ghcr.io/unpackerr/unpackerr:latest
