@@ -6,8 +6,8 @@
     cpu: true
     memory: true
     disk:
-      - /
-      - /data
+      - /mnt/pool/media
+      - /mnt/pool/users
 
 - search:
     provider: {{HOMEPAGE_VAR_SEARCH_PROVIDER}}

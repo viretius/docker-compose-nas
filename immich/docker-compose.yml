@@ -2,6 +2,9 @@ services:
   immich-server:
     container_name: immich_server
     image: ghcr.io/immich-app/immich-server:v1.132.3
+    networks: 
+      - default
+      - reverse-proxy
     environment:
       DB_HOSTNAME: immich_postgres
       DB_PASSWORD: ${IMMICH_DB_PASSWORD}
@@ -17,26 +20,20 @@ services:
       - immich-database
     restart: always
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.immich.rule=(Host(`${IMMICH_HOSTNAME}`))
-      - traefik.http.routers.immich.tls=true
-      - traefik.http.routers.immich.tls.certresolver=myresolver
-      - traefik.http.services.immich.loadbalancer.server.port=2283
-      - homepage.group=Apps
-      - homepage.name=Immich
-      - homepage.icon=immich.png
-      - homepage.href=https://${IMMICH_HOSTNAME}
-      - homepage.description=Self-hosted photo and video management solution
-      - homepage.weight=4
-      - homepage.widget.type=immich
-      - homepage.widget.url=http://immich-server:2283
-      - homepage.widget.key=${IMMICH_API_KEY}
-      - homepage.widget.version=2
+      - "traefik.enable=true"
+      - "traefik.http.routers.immich.rule=Host(${BAZARR_HOSTNAME})"
+      - "traefik.http.routers.immich.tls=true"
+      - "traefik.http.routers.immich.tls.certresolver=myresolver"
+      - "traefik.http.services.immich.loadbalancer.server.port=2283"
     profiles:
       - immich
+    
 
   immich-machine-learning:
     container_name: immich_machine_learning
+    networks: 
+      - default
+      - reverse-proxy
     image: ghcr.io/immich-app/immich-machine-learning:v1.132.3
     volumes:
       - immich-model-cache:/cache
@@ -46,6 +43,9 @@ services:
 
   immich-redis:
     container_name: immich_redis
+    networks: 
+      - default
+      - reverse-proxy
     image: public.ecr.aws/docker/library/redis:6.2
     restart: always
     healthcheck:
@@ -55,6 +55,9 @@ services:
 
   immich-database:
     container_name: immich_postgres
+    networks: 
+      - default
+      - reverse-proxy
     image: ghcr.io/tensorchord/pgvecto-rs:pg14-v0.2.0
     environment:
       POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
@@ -74,6 +77,12 @@ services:
       postgres -c shared_preload_libraries=vectors.so -c 'search_path="$$user", public, vectors' -c logging_collector=on -c max_wal_size=2GB -c shared_buffers=512MB -c wal_compression=on
     profiles:
       - immich
-
+      
 volumes:
   immich-model-cache:
+
+networks:
+  default:
+    external: true
+  reverse-proxy:
+    external: true
