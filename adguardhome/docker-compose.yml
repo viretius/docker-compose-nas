@@ -41,6 +41,7 @@ services:
       - "traefik.http.services.adguardhome.loadbalancer.server.port=3000"
       - "traefik.http.routers.adguardhome.rule=Host(${JELLYSEERR_HOSTNAME})"
       - "traefik.http.routers.adguardhome.tls=true"
+      - "traefik.http.routers.adguardhome.entrypoints=websecure"
       - "traefik.http.routers.adguardhome.tls.certresolver=myresolver"
     profiles:
       - adguardhome
