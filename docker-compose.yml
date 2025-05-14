@@ -80,7 +80,7 @@ services:
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --entrypoints.web.http.redirections.entrypoint.permanent=true
-      - --certificatesresolvers.myresolver.acme.dnschallenge=${DNS_CHALLENGE:-true}
+      - --certificatesresolvers.myresolver.acme.dnschallenge=true
       - --certificatesresolvers.myresolver.acme.dnschallenge.provider=${DNS_CHALLENGE_PROVIDER:-cloudflare}
       - --certificatesresolvers.myresolver.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
       - --certificatesresolvers.myresolver.acme.caserver=${LETS_ENCRYPT_CA_SERVER:-https://acme-v02.api.letsencrypt.org/directory}
@@ -90,24 +90,17 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`traefik.$HOSTNAME`)" # HTTP Router for the dashboard
       - "traefik.http.routers.traefik.entrypoints=websecure"
-      #- "traefik.http.routers.traefik-rtr.middlewares=chain-authelia@file" # For Authelia Authentication
-      - "traefik.http.middlewares.whitelist.ipwhitelist.sourcerange=192.168.178.0/24,192.168.91.0/24"
-      - "traefik.http.routers.traefik.middlewares=whitelist" # IP Whitelist for the dashboard
-      # Services - API
       - "traefik.http.routers.traefik.service=api@internal"
+      #- "traefik.http.routers.traefik-rtr.middlewares=chain-authelia@file" # For Authelia Authentication
+      - "traefik.http.middlewares.whitelist.ipwhitelist.sourcerange=192.168.178.0/24,192.168.91.0/24,127.0.0.1/24" #whitelist for dashboard-access
+      - "traefik.http.routers.traefik.middlewares=whitelist" # use ip-whitelist as middleware 
     networks:
       reverse_proxy:
         ipv4_address: 192.168.90.254 # specify a static IP
       socket_proxy:
     ports:
-      - target: 80
-        published: 80
-        protocol: tcp
-        mode: host
-      - target: 443
-        published: 443
-        protocol: tcp
-        mode: host
+      - "80:80"
+      - "443:443"
       - "8080:8080" #dashboard
     volumes:
       - ${CONFIG_ROOT:-.}/letsencrypt:/letsencrypt
@@ -132,15 +125,15 @@ services:
       - ${MEDIA_ROOT}:/media
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8989/sonarr/ping"]
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8989/ping"]
       interval: 30s
       retries: 10
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.sonarr.rule=Host(`sonarr.$HOSTNAME`)
-      - traefik.http.routers.sonarr.tls=true
-      - traefik.http.routers.sonarr.tls.certresolver=myresolver
-      - traefik.http.services.sonarr.loadbalancer.server.port=8989
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.$HOSTNAME`)"
+      - "traefik.http.routers.sonarr.tls=true"
+      - "traefik.http.routers.sonarr.tls.certresolver=myresolver"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
   radarr:
     image: lscr.io/linuxserver/radarr
     container_name: radarr
@@ -155,15 +148,15 @@ services:
       - ${MEDIA_ROOT}:/media
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:7878/radarr/ping"]
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:7878/ping"]
       interval: 30s
       retries: 10
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.radarr.rule=Host(`radarr.$HOSTNAME`)
-      - traefik.http.routers.radarr.tls=true
-      - traefik.http.routers.radarr.tls.certresolver=myresolver
-      - traefik.http.services.radarr.loadbalancer.server.port=7878
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.$HOSTNAME`)"
+      - "traefik.http.routers.radarr.tls=true"
+      - "traefik.http.routers.radarr.tls.certresolver=myresolver"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
   lidarr:
     image: lscr.io/linuxserver/lidarr
     container_name: lidarr
@@ -178,15 +171,15 @@ services:
       - ${MEDIA_ROOT}:/media
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8686/lidarr/ping"]
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8686/ping"]
       interval: 30s
       retries: 10
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.lidarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/lidarr`))
-      - traefik.http.routers.lidarr.tls=true
-      - traefik.http.routers.lidarr.tls.certresolver=myresolver
-      - traefik.http.services.lidarr.loadbalancer.server.port=8686
+      - "traefik.enable=true"
+      - "traefik.http.routers.lidarr.rule=Host(`lidarr.$HOSTNAME`)"
+      - "traefik.http.routers.lidarr.tls=true"
+      - "traefik.http.routers.lidarr.tls.certresolver=myresolver"
+      - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
   bazarr:
     image: lscr.io/linuxserver/bazarr
     container_name: bazarr
@@ -201,15 +194,39 @@ services:
       - ${MEDIA_ROOT}:/media
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:6767/bazarr/ping"]
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:6767/ping"]
       interval: 5s
       retries: 10
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.bazarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/bazarr`))
-      - traefik.http.routers.bazarr.tls=true
-      - traefik.http.routers.bazarr.tls.certresolver=myresolver
-      - traefik.http.services.bazarr.loadbalancer.server.port=6767
+      - "traefik.enable=true"
+      - "traefik.http.routers.bazarr.rule=Host(`bazarr.$HOSTNAME`)"
+      - "traefik.http.routers.bazarr.tls=true"
+      - "traefik.http.routers.bazarr.tls.certresolver=myresolver"
+      - "traefik.http.services.bazarr.loadbalancer.server.port=6767"
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    # ports:
+    #   - "9696:9696" # Explosed via gluetun
+    security_opt:
+      - no-new-privileges:true
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/prowlarr:/config
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/prowlarr/ping"]
+      interval: 30s
+      retries: 10
+    labels:
+    # no traefik router, because qb gets exposed via gluetun (dashboard and downloads)
   jellyseerr:
     image: ghcr.io/fallenbagel/jellyseerr:latest
     container_name: jellyseerr
@@ -238,30 +255,6 @@ services:
       - traefik.http.routers.jellyseerr.tls=true
       - traefik.http.routers.jellyseerr.tls.certresolver=myresolver
       - traefik.http.services.jellyseerr.loadbalancer.server.port=5055
-  prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
-    container_name: prowlarr
-    # ports:
-    #   - "9696:9696" # Explosed via gluetun
-    security_opt:
-      - no-new-privileges:true
-    network_mode: "service:vpn"
-    depends_on:
-      vpn:
-        condition: service_healthy
-    environment:
-      - PUID=${USER_ID}
-      - PGID=${GROUP_ID}
-      - TZ=${TIMEZONE}
-    volumes:
-      - ${CONFIG_ROOT:-.}/prowlarr:/config
-    restart: always
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/prowlarr/ping"]
-      interval: 30s
-      retries: 10
-    labels:
-    # no traefik router, because qb gets exposed via gluetun (dashboard and downloads)
   flaresolverr: #bypass Cloudflare and DDoS-GUARD protection
     image: 21hsmw/flaresolverr:nodriver
     container_name: flaresolverr
@@ -279,8 +272,9 @@ services:
       - traefik.http.routers.flaresolverr.tls=true
       - traefik.http.services.flaresolverr.loadbalancer.server.port=8191
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:libtorrentv1
+    image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
+    restart: unless-stopped
     # ports:
     #   - "8081:8080" # Explosed via gluetun. 8081 because traefik-dashboard is using port 8080
     security_opt:
@@ -289,30 +283,43 @@ services:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
       - TZ=${TIMEZONE}
-      #- WEBUI_PORT=8080 # 8080 = default
-      - DOCKER_MODS=ghcr.io/gabe565/linuxserver-mod-vuetorrent
+      - WEBUI_PORT=8080 
+      - QBITTORRENT_INTERFACE=tun0  # Forces all traffic through VPN interface
+
+      # Port Forwarding Mod (Syncs qBittorrent with Gluetun)
+      - DOCKER_MODS=ghcr.io/t-anc/gsp-qbittorent-gluetun-sync-port-mod:main
+      - GSP_GTN_API_KEY=${GSP_GTN_API_KEY:-randomapikey}  # Gluetun API-key for port forwarding updates
+      - GSP_QBITTORRENT_PORT=${GSP_QBITTORRENT_PORT:-53764}  # Torrenting port (auto-updated by Gluetun)
+      - GSP_MINIMAL_LOGS=false  # Enables full logs for debugging purposes
     volumes:
       - ${CONFIG_ROOT:-.}/qbittorrent:/config
+      - ./
       - ${DOWNLOAD_ROOT}:/media/torrents
       - ${CONFIG_ROOT:-.}/gluetun:/gluetun
-    restart: unless-stopped
     healthcheck:
-      # Container may fail if the PIA's token expired, so mark as unhealthy when there is no internet connection
+      # Container may fail if vpn token expired, so mark as unhealthy when there is no internet connection
       # see: https://github.com/qdm12/gluetun/issues/641#issuecomment-933856220
       test:
         ["CMD", "curl", "--fail", "http://127.0.0.1:8080", "https://google.com"]
       interval: 30s
       retries: 10
-    network_mode: "service:vpn"
+    # ─── Performance Optimization ──────────────────────────────────────
+    ulimits:
+      nofile:
+        soft: 32768
+        hard: 65536  # Increases allowed open files (important for high-speed torrenting)
+
+    network_mode: "service:gluetun"
     depends_on:
-      vpn:
+      gluetun:
         condition: service_healthy
     labels:
     # no traefik router here, because qb gets exposed via gluetun (dashboard and downloads)
     #- com.centurylinklabs.watchtower.depends-on=/vpn
     #https://github.com/qdm12/gluetun/discussions/2686
   gluetun:
-    image: qmcgaw/gluetun:v3.39.0 # Pinned to this version to avoid issues in v3.40+ specific to protonvpn
+    #image: qmcgaw/gluetun:v3.39.0 # Pinned to this version to avoid issues in v3.40+ specific to protonvpn
+    image: ghcr.io/qdm12/gluetun:latest 
     container_name: gluetun
     stdin_open: true
     tty: true
@@ -325,47 +332,45 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     volumes:
-      - ${CONFIG_ROOT:-.}/gluetun:/gluetun
+      - ${CONFIG_ROOT:-.}/gluetun:/gluetun #store cpn-config persistently
       - ${CONFIG_ROOT:-.}/qbittorent/config:/config
       - ${CONFIG_ROOT:-.}/qbittorent/active:/active
       - ${CONFIG_ROOT:-.}/traefik/acme/:/acme
     ports:
-      - 8778:8888/tcp  # HTTP proxy
-      - 8001:8000/tcp  # GT Control Server
-      - 8388:8388/tcp  # Shadowsocks
-      - 8388:8388/udp  # Shadowsocks
       - 8080:8080      # Exposing QBittorrent-dashboard through Docker Host LAN IP  
-      - 6881:6881      # QB
-      - 6881:6881/udp  # QB
+      #- 8778:8888/tcp  # HTTP proxy (e.g. privoxy)
+      #- 8388:8388/tcp  # Shadowsocks
+      #- 8388:8388/udp  # Shadowsocks
+      #- 8001:8000/tcp  # GT Control Server (api to update listening-port), not needed, since the mod is running in a container with network_mode: "service:gluetun"
+      - 6881:6881      # QB for active P2P
+      - 6881:6881/udp  # QB for active P2P
     environment:
+      #- VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data "json={\"listen_port\":{{PORTS}}}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'
       - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER:-protonvpn}
-      - VPN_PORT_FORWARDING=on
-      - VPN_PORT_FORWARDING_PROVIDER=${VPN_SERVICE_PROVIDER:-protonvpn}  
-      - VPN_PORT_FORWARDING_STATUS_FILE=/gluetun/forwarded_port     
-      - TZ=${TIMEZONE}
-      - UPDATER_PERIOD=24h
-      - FIREWALL_OUTBOUND_SUBNETS=192.168.91.0/24,172.17.0.0/24
-      - DOT_PROVIDERS=cloudflare,google
-      - PUBLICIP_API=ip2location
-      #- PORT_FORWARD_ONLY=on
-      ### Wireguard Settings
       - VPN_TYPE={VPN_TYPE:-wireguard}
+      - VPN_PORT_FORWARDING=on
+      - TZ=${TIMEZONE}
+      - WIREGUARD_PRIVATE_KEY=$wgPrivateKey
+      - WIREGUARD_ADDRESSES=$wgAddresses
+      - LOG_LEVEL=warn
+      - UPDATER_PERIOD=24h #update vpn-serverstats (ips, keys,...)
+      #- FIREWALL_OUTBOUND_SUBNETS=192.168.91.0/24,172.17.0.0/24 # let qbittorrent communicate with other services in the lokal network
+      #- DOT_PROVIDERS=cloudflare,google #dns-over-tls
+      #- PUBLICIP_API=ip2location #get public ip
+      ### Wireguard Settings
       #In qbittorrent, make sure you check Bypass authentication for clients on localhost, 
       #then you don't need to worry about passing auth into the port manager container.
       #- WIREGUARD_PUBLIC_KEY=$wgPublicKey
-      - WIREGUARD_PRIVATE_KEY=$wgPrivateKey
       #- WIREGUARD_ENDPOINT_IP=$endpointIP   
-      - WIREGUARD_ADDRESSES=$wgAddresses
-      - SERVER_HOSTNAMES=$serverHostnames #https://raw.githubusercontent.com/qdm12/gluetun/master/internal/storage/servers.json
-      - LOG_LEVEL=warn
+      
     sysctls:
+       # Disables IPv6 to prevent leaks
       - net.ipv4.conf.all.src_valid_mark=1
       - net.ipv6.conf.default.disable_ipv6=1
       - net.ipv6.conf.all.disable_ipv6=1
       - net.ipv6.conf.lo.disable_ipv6=1
     #https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md
-    command: 
-      - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data "json={\"listen_port\":{{PORTS}}}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'
+
     labels:
       - traefik.enable=true"
       #qBittorrent-dashboard
@@ -381,10 +386,10 @@ services:
       - traefik.http.routers.prowlarr.tls.certresolver=myresolver
       - traefik.http.services.prowlarr.loadbalancer.server.port=9696 
     healthcheck:
-      test: ping -c 1 www.google.com || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD", "wget", "--spider", "-q", "http://google.com"]  # Checks if the VPN connection is active
+      interval: 30s  # Runs every 30 seconds
+      timeout: 10s  # Fails if it takes longer than 10 seconds
+      retries: 3  # Allows 3 failures before marking the container as unhealthy
     restart: always    
   unpackerr:
     image: ghcr.io/unpackerr/unpackerr:latest
@@ -437,7 +442,7 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
-      - traefik.http.routers.jellyfin.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/jellyfin`))
+      - traefik.http.routers.jellyfin.rule=(Host(`${HOSTNAME}`))
       - traefik.http.routers.jellyfin.tls=true
       - traefik.http.routers.jellyfin.tls.certresolver=myresolver
       - traefik.http.services.jellyfin.loadbalancer.server.port=8096
@@ -544,17 +549,19 @@ services:
       - traefik.http.services.portainer.loadbalancer.server.port=9000
     restart: unless-stopped
   watchtower:
-    image: ghcr.io/containrrr/watchtower:latest
+    image: containrrr/watchtower
     container_name: watchtower
-    restart: always
+    restart: unless-stopped
     networks:
       - reverse_proxy
       - socket_proxy
     command: ["-H", "tcp://socket-proxy:2375"]
     environment:
       - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400  # Checks for updates every 24 hours
+      - WATCHTOWER_LABEL_ENABLE=true  # Ensures only labeled containers are updated
     volumes:
-      #- /var/run/docker.sock:/var/run/docker.sock
+      #- /var/run/docker.sock:/var/run/docker.sock #use socket proxy for higher safety
   autoheal:
     image: willfarrell/autoheal:latest
     container_name: autoheal
