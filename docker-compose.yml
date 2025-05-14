@@ -64,6 +64,7 @@ services:
       - --ping=true
       - --api=true
       - --api.dashboard=true
+      - --api.insecure=true
       - --providers.docker=true
       - --serversTransport.insecureSkipVerify=true # Skip TLS verification for Docker socket
       - --traefik.http.routers.api.entrypoints=traefik"
@@ -72,7 +73,7 @@ services:
       - --providers.docker.network=reverse_proxy # Traefik searches for container labels only in the specified network
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
-      - --entrypoints.traefik.address=:8080 #?
+      #- --entrypoints.traefik.address=:8080 #?
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --entrypoints.web.http.redirections.entrypoint.permanent=true
@@ -90,16 +91,17 @@ services:
       - "traefik.http.routers.traefik.entrypoints=websecure"
       - "traefik.http.routers.traefik.service=api@internal"
       #- "traefik.http.routers.traefik-rtr.middlewares=chain-authelia@file" # For Authelia Authentication
-      - "traefik.http.middlewares.whitelist.ipwhitelist.sourcerange=192.168.178.0/24,192.168.91.0/24,127.0.0.0/24" #whitelist for dashboard-access
+      - "traefik.http.middlewares.whitelist.ipwhitelist.sourcerange=192.168.178.0/24,192.168.90.0/24,127.0.0.0/24" #whitelist for dashboard-access
       - "traefik.http.routers.traefik.middlewares=whitelist" # use ip-whitelist as middleware 
     networks:
       reverse_proxy:
+        ipv4_address: 192.168.90.250 # specify a static IP
       socket_proxy:
-        ipv4_address: 192.168.90.254 # specify a static IP
+        ipv4_address: 192.168.91.250 # specify a static IP
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080" #dashboard
+      - "8081:8080" #dashboard
     volumes:
       - ${CONFIG_ROOT:-.}/letsencrypt:/letsencrypt
       - ./acme.json:/acme.json # Certs File 
@@ -227,7 +229,6 @@ services:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/ping"]
       interval: 30s
       retries: 10
-    labels:
     # no traefik router, because qb gets exposed via gluetun (dashboard and downloads)
   jellyseerr:
     image: ghcr.io/fallenbagel/jellyseerr:latest
@@ -280,8 +281,6 @@ services:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     restart: unless-stopped
-    # ports:
-    #   - "8081:8080" # Explosed via gluetun. 8081 because traefik-dashboard is using port 8080
     security_opt:
       - no-new-privileges:true
     environment:
@@ -290,7 +289,6 @@ services:
       - TZ=${TIMEZONE}
       - WEBUI_PORT=8081 
       - QBITTORRENT_INTERFACE=tun0  # Forces all traffic through VPN interface
-
       # Port Forwarding Mod (Syncs qBittorrent with Gluetun)
       - DOCKER_MODS=ghcr.io/t-anc/gsp-qbittorent-gluetun-sync-port-mod:main
       - GSP_GTN_API_KEY=${GSP_GTN_API_KEY:-randomapikey}  # Gluetun API-key for port forwarding updates
@@ -312,12 +310,10 @@ services:
       nofile:
         soft: 32768
         hard: 65536  # Increases allowed open files (important for high-speed torrenting)
-
     network_mode: "service:gluetun"
     depends_on:
       gluetun:
         condition: service_healthy
-    labels:
     # no traefik router here, because qb gets exposed via gluetun (dashboard and downloads)
     #- com.centurylinklabs.watchtower.depends-on=/vpn
     #https://github.com/qdm12/gluetun/discussions/2686
@@ -331,7 +327,7 @@ services:
     cap_add:
       - NET_ADMIN
     networks:
-      - reverse-proxy
+      - reverse_proxy
     devices:
       - /dev/net/tun:/dev/net/tun
     secrets:
@@ -516,10 +512,8 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/homepage:/app/config
       - ${MEDIA_ROOT}:/media
-    restart: always
-    command:
-      - [sh, -c, "cp -n /app/config/tpl/*.yaml /app/config && node server.js"]
-      - ["-H", "tcp://socket-proxy:2375"] # instead of - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: always           
+    command: ["sh", "-c", "cp -n /app/config/tpl/*.yaml /app/config && node server.js -H tcp://socket-proxy:2375"] # instead of - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
       - traefik.enable=true
       - traefik.http.routers.homepage.rule=Host(${HOMEPAGE_HOSTNAME})
@@ -536,7 +530,7 @@ services:
     command: ["-H", "tcp://socket-proxy:2375"]
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - portainer_data:/data
+      - ./@docker/docker-compose-nas/portainer/data:/data
     labels:
       - traefik.enable=true
       - traefik.http.routers.portainer.rule=Host(${PORTAINER_HOSTNAME})
@@ -558,7 +552,6 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=86400  # Checks for updates every 24 hours
       - WATCHTOWER_LABEL_ENABLE=true  # Ensures only labeled containers are updated
-    volumes:
       #- /var/run/docker.sock:/var/run/docker.sock #use socket proxy for higher safety
   autoheal:
     image: willfarrell/autoheal:latest
@@ -570,8 +563,6 @@ services:
     command: ["-H", "tcp://socket-proxy:2375"]
     environment:
       - AUTOHEAL_CONTAINER_LABEL=all
-    volumes:
-      #- /var/run/docker.sock:/var/run/docker.sock
 
 networks:
   default:
@@ -584,11 +575,14 @@ networks:
         - subnet: 192.168.91.0/24
   reverse_proxy:
     external: true
+    ipam:
+      config:
+        - subnet: 192.168.90.0/24
 
 secrets:
   porkbun_api_key:
     file: ./secrets/porkbun_api_key.secret
-  porkbun_secret_key:
+  porkbun_secret_api_key:
     file: ./secrets/porkbun_secret_api_key.secret
   wireguard_private_key:
     file: ./secrets/wireguard_private_key.secret
