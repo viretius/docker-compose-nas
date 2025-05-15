@@ -1,5 +1,6 @@
 services:
-  adguardhome:
+  adguardhome: 
+    # filterlist for yt-ads: https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/SmartTV-AGH.txt
     image: adguard/adguardhome
     container_name: adguardhome
     restart: always
