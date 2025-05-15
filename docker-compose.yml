@@ -509,6 +509,7 @@ services:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     environment:
+      - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_HOSTNAME},192.168.90.250,192.168.178.22:3030 #no spaces between values!
       - DOCKER_HOST=tcp://socket-proxy:2375
       - PORT=3030 #change default listening port, because adguard uses the same
     networks:
@@ -572,6 +573,7 @@ services:
 
 networks:
   default:
+
     driver: bridge
   socket_proxy:
     name: socket_proxy
