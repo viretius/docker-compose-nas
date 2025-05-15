@@ -27,7 +27,7 @@ services:
       - "traefik.http.routers.adguardhome.rule=Host(${ADGUARD_HOSTNAME})"
       - "traefik.http.routers.adguardhome.tls=true"
       - "traefik.http.routers.adguardhome.entrypoints=websecure"
-      - "traefik.http.services.adguardhome.loadbalancer.server.port=3001" #todo: make dashboard accessible on port 3001 during the initial configuration (homepage also uses port 3000) 
+      - "traefik.http.services.adguardhome.loadbalancer.server.port=3000" 
       - "traefik.http.routers.adguardhome.tls.certresolver=myresolver"
     profiles:
       - adguardhome
