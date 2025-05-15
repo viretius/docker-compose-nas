@@ -124,7 +124,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/sonarr:/config
-      - ${MEDIA_ROOT}:/media
+      - ${MEDIA_ROOT}:/Media
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8989/ping"]
@@ -148,7 +148,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/radarr:/config
-      - ${MEDIA_ROOT}:/media
+      - ${MEDIA_ROOT}:/Media
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:7878/ping"]
@@ -172,7 +172,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/lidarr:/config
-      - ${MEDIA_ROOT}:/media
+      - ${MEDIA_ROOT}:/Media
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8686/ping"]
@@ -196,7 +196,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/bazarr/config:/config
-      - ${MEDIA_ROOT}:/media
+      - ${MEDIA_ROOT}:/Media
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:6767/ping"]
@@ -226,6 +226,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/prowlarr:/config
+      - $DATAPOOL/media/torrents/incoming:/Media/incoming
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/ping"]
@@ -298,7 +299,7 @@ services:
       - GSP_MINIMAL_LOGS=false  # Enables full logs for debugging purposes
     volumes:
       - ${CONFIG_ROOT:-.}/qbittorrent:/config
-      - ${DOWNLOAD_ROOT}:/media/torrents
+      - ${MEDIA_ROOT}/torrents/incoming:/Media/incoming
       - ${CONFIG_ROOT:-.}/gluetun:/gluetun
     healthcheck:
       # Container may fail if vpn token expired, so mark as unhealthy when there is no internet connection
