@@ -10,24 +10,24 @@ services:
     networks:
       adguardhome:
         ipv4_address: 10.0.0.10
-      default:
+      reverse_proxy:
     ports:
       - "53:53/tcp"
       - "53:53/udp"
       - "68:68/tcp"
       - "68:68/udp"
       - "853:853/tcp"
+      - "3000:3000" #dashboard exposed for the first setup
     volumes:
       - ./adguardhome/work:/opt/adguardhome/work
       - ./adguardhome/conf:/opt/adguardhome/conf
       - ./adguardhome/certs:/opt/adguardhome/certs
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=reverse_proxy"
-      - "traefik.http.services.adguardhome.loadbalancer.server.port=3000"
-      - "traefik.http.routers.adguardhome.rule=Host(${JELLYSEERR_HOSTNAME})"
+      - "traefik.http.routers.adguardhome.rule=Host(${ADGUARD_HOSTNAME})"
       - "traefik.http.routers.adguardhome.tls=true"
       - "traefik.http.routers.adguardhome.entrypoints=websecure"
+      - "traefik.http.services.adguardhome.loadbalancer.server.port=3001" #todo: make dashboard accessible on port 3001 during the initial configuration (homepage also uses port 3000) 
       - "traefik.http.routers.adguardhome.tls.certresolver=myresolver"
     profiles:
       - adguardhome
