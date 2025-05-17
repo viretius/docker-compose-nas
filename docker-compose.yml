@@ -4,7 +4,7 @@ services:
   # Docker Socket Proxy - Security Enchanced Proxy for Docker Socket
   socket-proxy:
     container_name: socket-proxy
-    image: tecnativa/docker-socket-proxy
+    image: lscr.io/linuxserver/socket-proxy:latest
     restart: always
     networks:
       socket_proxy:
@@ -18,37 +18,39 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
       - LOG_LEVEL=info # debug,info,notice,warning,err,crit,alert,emerg
+      ## Variables match the URL prefix (i.e. AUTH blocks access to /auth/* parts of the API, etc.).
       # 0 to revoke access.
       # 1 to grant access.
-      - CLIENT=1
-      - CONNECT=1
-      - SERVER=1
+      ## Granted by Default
+      - EVENTS=1
       - PING=1
       - VERSION=1
-      # Security critical ## Revoked by Default
+      ## Revoked by Default
+      # Security critical
       - AUTH=0
       - SECRETS=0
-      - POST=1 # Watchtower
+      - POST=1 # Portainer
       # Not always needed
-      - BUILD=0
+      - BUILD=1
       - COMMIT=0
       - CONFIGS=0
       - CONTAINERS=1 # Traefik, portainer, etc.
       - DISTRIBUTION=0
-      - DELETE=1 #watchtower
-      - EVENTS=1 
       - EXEC=0
       - IMAGES=1 # Portainer
       - INFO=1 # Portainer
-      - NETWORKS=1 # Portainer, traefik
+      - NETWORKS=1 # Portainer
       - NODES=0
       - PLUGINS=1
-      - SERVICES=1 # Portainer, traefik
+      - SERVICES=1 # Portainer
       - SESSION=0
       - SWARM=0
-      - SYSTEM=0
+      - SYSTEM=1
       - TASKS=1 # Portainer
-      - VOLUMES=1 # Portainer
+      - VOLUMES=1 # Portainer, Homepage
+    read_only: true
+    tmpfs:
+      - /run
   traefik:
     image: ghcr.io/traefik/traefik:3.4
     container_name: traefik
@@ -129,7 +131,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/sonarr:/config
-      - ${MEDIA_ROOT}:/Media
+      - ${MEDIA_ROOT}:/media
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8989/ping"]
@@ -155,7 +157,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/radarr:/config
-      - ${MEDIA_ROOT}:/Media
+      - ${MEDIA_ROOT}:/media
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:7878/ping"]
@@ -181,7 +183,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/lidarr:/config
-      - ${MEDIA_ROOT}:/Media
+      - ${MEDIA_ROOT}:/media
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8686/ping"]
@@ -207,7 +209,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/bazarr/config:/config
-      - ${MEDIA_ROOT}:/Media
+      - ${MEDIA_ROOT}:/media
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:6767/ping"]
@@ -237,7 +239,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/prowlarr:/config
-      - ${MEDIA_ROOT}/media/torrents/incoming:/Media/incoming
+      - ${MEDIA_ROOT}:/media
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/ping"]
@@ -287,6 +289,10 @@ services:
   flaresolverr: #bypass Cloudflare and DDoS-GUARD protection
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
+    networks:
+      default:
+        ipv4_address:
+          172.19.0.2
     security_opt:
       - no-new-privileges:true
     restart: always
@@ -318,7 +324,7 @@ services:
       - GSP_MINIMAL_LOGS=false  # Enables full logs for debugging purposes
     volumes:
       - ./qbittorrent/config:/config
-      - ${MEDIA_ROOT}/downloads:/downloads 
+      - ${MEDIA_ROOT}/torrents:/media/torrents
       - ${CONFIG_ROOT:-.}/gluetun:/gluetun
     healthcheck:
       # Container may fail if vpn token expired, so mark as unhealthy when there is no internet connection
@@ -355,7 +361,9 @@ services:
     cap_add:
       - NET_ADMIN
     networks:
-      - reverse_proxy
+      reverse_proxy:
+        ipv4_address:
+          192.168.90.9
     devices:
       - /dev/net/tun:/dev/net/tun
     secrets:
@@ -388,7 +396,7 @@ services:
       - SERVER_COUNTRIES=Netherlands,Denmark,Sweden,Finland
       - LOG_LEVEL=warn
       - UPDATER_PERIOD=24h #update vpn-serverstats (ips, keys,...)
-      - FIREWALL_OUTBOUND_SUBNETS=192.168.90.0/24,172.17.0.0/24 # let qbittorrent communicate with other services in the lokal network
+      - FIREWALL_OUTBOUND_SUBNETS=192.168.90.0/24,172.17.0.0/24,172.19.0.0/24 # let qbittorrent communicate with other services in the lokal network
       #- DOT_PROVIDERS=cloudflare,google #dns-over-tls
       #- PUBLICIP_API=ip2location #get public ip
       #In qbittorrent, make sure you check Bypass authentication for clients on localhost, 
@@ -413,7 +421,7 @@ services:
     networks:
       - reverse_proxy
     volumes:
-      - ${DOWNLOAD_ROOT}:/media/torrents
+      - ${MEDIA_ROOT}/downloads:/downloads/torrents
     restart: always
     user: ${USER_ID}:${GROUP_ID}
     environment:
@@ -462,9 +470,10 @@ services:
       #- "1900:1900/udp"
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8096/health"]
+      test: ping -c 1 www.google.com || exit 1
       interval: 30s
-      retries: 10
+      timeout: 10s
+      retries: 3
     labels:
       - traefik.enable=true
       - traefik.http.routers.jellyfin.rule=Host(`$JELLYFIN_DOMAINNAME`)
@@ -485,7 +494,7 @@ services:
       - OAUTHLIB_RELAX_TOKEN_SCOPE=1
     volumes:
       - ${CONFIG_ROOT:-.}/calibre-web:/config
-      - ${MEDIA_ROOT}/books:/books
+      - ${MEDIA_ROOT}:/media
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -507,15 +516,13 @@ services:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
       - TZ=${TIMEZONE}
-      - RADARR_URL=http://radarr:7878/
+      - RADARR_URL=${RADARR_DOMAINNAME}
       - RADARR_KEY=${RADARR_API_KEY}
-      - SONARR_URL=http://sonarr:8989/
+      - SONARR_URL=${SONARR_DOMAINNAME}
       - SONARR_KEY=${SONARR_API_KEY}
-      - LIDARR_URL=http://lidarr:8686/
+      - LIDARR_URL=${LIDARR_DOMAINNAME}
       - LIDARR_KEY=${LIDARR_API_KEY}
-      - QBITTORRENT_URL=http://qbittorrent:8081
-      - QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME}
-      - QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD}
+      - QBITTORRENT_URL=http://192.168.90.9:8081/
       - LOG_LEVEL=${DECLUTTARR_LOG_LEVEL:-INFO}
       - TEST_RUN=${DECLUTTARR_TEST_RUN:-False}
       - REMOVE_TIMER=${DECLUTTARR_REMOVE_TIMER:-10}
@@ -537,20 +544,22 @@ services:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     environment:
-      - HOMEPAGE_ALLOWED_HOSTS=* #allow all, because homepage wont be ${HOMEPAGE_DOMAINNAME},192.168.90.250,192.168.178.22:3030 #no spaces between values!
-      - DOCKER_HOST=tcp://socket-proxy:2375
+      - HOMEPAGE_ALLOWED_HOSTS=* #allow all, because homepage wont be exposed to the internet, ${HOMEPAGE_DOMAINNAME},192.168.90.250,192.168.178.22:3030 #no spaces between values!
       - PORT=3030 #change default listening port, because adguard uses the same
+      - HOMEPAGE_VAR_JELLYFIN_DOMAINNAME=${JELLYFIN_DOMAINNAME}
+      #- HOMEPAGE_JELLYFIN_API_KEY=
     networks:
       - reverse_proxy
       - socket_proxy
     volumes:
-      - ${CONFIG_ROOT:-.}/homepage:/app/config
-      - ${MEDIA_ROOT}:/media
+      - ./homepage:/app/config
+      - /mnt/pool:/mnt/pool:ro
+      #- DOCKER_HOST=tcp://socket-proxy:2375
     restart: always           
-    command: ["sh", "-c", "cp -n /app/config/tpl/*.yaml /app/config && node server.js"] 
+    command: ["node", "server.js", "-H", "tcp://socket-proxy:2375"]
     labels:
       - traefik.enable=true
-      - traefik.http.routers.homepage.rule=Host(`$HOMEPAGE_DOMAINNAME`) || Host(`DOMAINNAME`) 
+      - traefik.http.routers.homepage.rule=Host(`$HOMEPAGE_DOMAINNAME`) 
       - traefik.http.routers.homepage.entrypoints=websecure
       - traefik.http.routers.homepage.tls=true
       - traefik.http.routers.homepage.tls.certresolver=myresolver
@@ -564,7 +573,6 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./portainer/data:/data
-    command: -H tcp://portainer_socket:2375
     environment:
       - TZ=$TIMEZONE
       - DOCKER_HOST=tcp://socket-proxy:2375
@@ -612,7 +620,7 @@ services:
       adguardhome:
         ipv4_address: 10.0.0.10
       reverse_proxy:
-        ipv4_address: 192.168.90.2
+        #ipv4_address: 192.168.90.2
     ports:
       - "53:53/tcp"
       - "53:53/udp"
@@ -657,7 +665,8 @@ services:
 
 networks:
   default:
-    driver: bridge
+    external: true
+    name: docker-compose-nas_default
   socket_proxy:
     name: socket_proxy
     external: true

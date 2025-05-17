@@ -1,6 +1,8 @@
 ---
 # For configuration options and examples, please see:
 # https://gethomepage.dev/en/configs/docker/
+# socket: /var/run/docker.sock 192.168.91.254
 
 my-docker:
-  socket: /var/run/docker.sock
+  host: 192.168.91.254
+  port: 2375
