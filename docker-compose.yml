@@ -326,6 +326,7 @@ services:
       - ./qbittorrent/config:/config
       - ${MEDIA_ROOT}/torrents:/media/torrents
       - ${CONFIG_ROOT:-.}/gluetun:/gluetun
+      - ${MEDIA_ROOT}:/media
     healthcheck:
       # Container may fail if vpn token expired, so mark as unhealthy when there is no internet connection
       # see: https://github.com/qdm12/gluetun/issues/641#issuecomment-933856220
@@ -421,14 +422,15 @@ services:
     networks:
       - reverse_proxy
     volumes:
-      - ${MEDIA_ROOT}/downloads:/downloads/torrents
+      - ${MEDIA_ROOT}/torrents:/torrents
+      - 
     restart: always
     user: ${USER_ID}:${GROUP_ID}
     environment:
       - TZ=${TIMEZONE}
-      - UN_SONARR_0_URL=http://sonarr:8989/
+      - UN_SONARR_0_URL=http://192.168.90.8:8989
       - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
-      - UN_RADARR_0_URL=http://radarr:7878/
+      - UN_RADARR_0_URL=http://192.168.90.10:7878
       - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
   sabnzbd:
     image: lscr.io/linuxserver/sabnzbd:latest
