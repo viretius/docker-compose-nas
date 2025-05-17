@@ -1,0 +1,6 @@
+[[roles]]
+name = "t-anc/GSP-Qbittorent-Gluetun-sync-port-mod"
+routes = ["GET /v1/openvpn/portforwarded"]
+auth = "apikey"
+# This is an example apikey, generate your own.
+apikey = "BPLrGQVcJf2CXB6SN8fN23L7vseont6YAuNE3BaLs4qt"

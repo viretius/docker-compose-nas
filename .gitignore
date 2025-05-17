@@ -13,6 +13,7 @@ docker-compose.override.yml
 /lidarr
 /bazarr
 /qbittorrent
+/portainer
 /pia
 /pia-shared
 /letsencrypt
