@@ -54,7 +54,7 @@ services:
   traefik:
     image: ghcr.io/traefik/traefik:3.4
     container_name: traefik
-    restart: unless-stopped
+    restart: always
     networks: 
       # specify static IPs
       reverse_proxy:
@@ -104,7 +104,7 @@ services:
       - traefik.http.routers.api.rule=Host(`$HOMEPAGE_VAR_TRAEFIK_DOMAINNAME`) # HTTP Router for the dashboard
       - traefik.http.routers.api.service=api@internal
       - traefik.http.routers.api.middlewares=auth"
-      - "traefik.http.middlewares.auth.basicauth.users=micham:$$2a$$12$$H3BPEIS1Vx.436medt8au.6A3VkAWcj7hK/f8dT7s5EKVH5d3vHMG"
+      - traefik.http.middlewares.auth.basicauth.users=micham:$$2a$$12$$H3BPEIS1Vx.436medt8au.6A3VkAWcj7hK/f8dT7s5EKVH5d3vHMG
       # - traefik.http.routers.api.tls=true
       # - traefik.http.routers.sonarr.tls.certresolver=myresolver
       # - traefik.http.routers.api.entrypoints=websecure
@@ -115,8 +115,8 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/letsencrypt:/letsencrypt
       - ./traefik/users:/traefik/users
-    extra_hosts:
-      - host.docker.internal:172.17.0.1 #? 
+    #extra_hosts:
+    #  - host.docker.internal:172.17.0.1 #? 
     depends_on:
       - socket-proxy
     healthcheck:
@@ -124,7 +124,7 @@ services:
       interval: 30s
       retries: 10
   sonarr:
-    image: lscr.io/linuxserver/sonarr
+    image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     security_opt:
       - no-new-privileges:true
@@ -151,7 +151,7 @@ services:
       - traefik.http.routers.sonarr.tls.certresolver=myresolver
       - traefik.http.services.sonarr.loadbalancer.server.port=8989
   radarr:
-    image: lscr.io/linuxserver/radarr
+    image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     networks: 
       reverse_proxy:
@@ -249,7 +249,7 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/prowlarr:/config
       - /etc/localtime:/etc/localtime:ro
-    restart: always
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/ping"]
       interval: 30s
@@ -332,23 +332,46 @@ services:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
     networks:
-      default:
+      reverse_proxy:
         ipv4_address:
-          172.19.0.2
+          192.168.90.5
     security_opt:
       - no-new-privileges:true
     restart: always
     environment:
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - LOG_HTML=${LOG_HTML:-false}
-      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - LOG_HTML=${LOG_HTML:-true}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-hcaptcha-solver}
       - TZ=${TIMEZONE}
     ports:
       - "${PORT:-8191}:8191"
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    ports:
+      - "8085:8080"
+    networks:
+      reverse_proxy:
+        ipv4_address: 192.168.90.8
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/sabnzbd:/config
+      - ${DATA_ROOT}:/data
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sabnzbd.rule=Host(`$HOMEPAGE_VAR_SABNZBD_DOMAINNAME`)
+      - traefik.http.routers.sabnzbd.tls=true
+      - traefik.http.routers.bazarr.entrypoints=websecure
+      - traefik.http.routers.sabnzbd.tls.certresolver=myresolver
+      - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
-    restart: unless-stopped
+    restart: always
     security_opt:
       - no-new-privileges:true
     environment:
@@ -374,11 +397,11 @@ services:
         soft: 32768
         hard: 65536  # Increases allowed open files (important for high-speed torrenting)
     healthcheck:
-      # Container may fail if the PIA's token expired, so mark as unhealthy when there is no internet connection
+      # Container may fail if the VPN token expired, so mark as unhealthy when there is no internet connection
       # see: https://github.com/qdm12/gluetun/issues/641#issuecomment-933856220
       test:
         ["CMD", "curl", "--fail", "http://127.0.0.1:8080", "https://google.com"]
-      interval: 30s
+      interval: 1m
       retries: 10
     network_mode: "service:gluetun"
     depends_on:
@@ -387,7 +410,7 @@ services:
     #https://github.com/qdm12/gluetun/discussions/2686
   gluetun:
     #image: qmcgaw/gluetun:v3.39.0 # Pinned to this version to avoid issues in v3.40+ specific to protonvpn
-    image: ghcr.io/qdm12/gluetun:latest 
+    image: ghcr.io/qdm12/gluetun
     container_name: gluetun
     stdin_open: true
     security_opt:
@@ -418,7 +441,8 @@ services:
       - 6881:6881      # QB for active P2P
       - 6881:6881/udp  # QB for active P2P
     environment:
-      #- VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data "json={\"listen_port\":{{PORTS}}}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'
+      # - HEALTH_VPN_DURATION_INITIAL=15s # https://airvpn.org/forums/topic/63708-gluetun-port-forwarding-works-for-an-hour/
+      # - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data "json={\"listen_port\":{{PORTS}}}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'
       - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER:-protonvpn}
       - VPN_TYPE=wireguard
       - VPN_PORT_FORWARDING=on
@@ -431,7 +455,6 @@ services:
       - UPDATER_PERIOD=24h #update vpn-serverstats (ips, keys,...)
       - FIREWALL_OUTBOUND_SUBNETS=192.168.90.0/24,172.17.0.0/24,172.19.0.0/24 # let qbittorrent communicate with other services in the lokal network
       #- DOT_PROVIDERS=cloudflare,google #dns-over-tls
-      #- PUBLICIP_API=ip2location #get public ip
       #In qbittorrent, make sure you check Bypass authentication for clients on localhost, 
       #then you don't need to worry about passing auth into the port manager container. 
     sysctls:
@@ -446,21 +469,22 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: always    
+    restart: always   
   unpackerr:
     image: ghcr.io/unpackerr/unpackerr:latest
     container_name: unpackerr
     networks:
-      - reverse_proxy
+        reverse_proxy:
+          ipv4_address: 192.168.90.44
     volumes:
       - ${DATA_ROOT}:/data
     restart: always
     user: ${USER_ID}:${GROUP_ID}
     environment:
       - TZ=${TIMEZONE}
-      - UN_SONARR_0_URL=http://192.168.90.8:8989
+      - UN_SONARR_0_URL=http://192.168.90.10:8989
       - UN_SONARR_0_API_KEY=${HOMEPAGE_VAR_SONARR_API_KEY}
-      - UN_RADARR_0_URL=http://192.168.90.10:7878
+      - UN_RADARR_0_URL=http://192.168.90.20:7878
       - UN_RADARR_0_API_KEY=${HOMEPAGE_VAR_RADARR_API_KEY}
   #sabnzbd:
    # image: lscr.io/linuxserver/sabnzbd:latest
@@ -496,7 +520,7 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/calibre-web:/config
       - ${MEDIA_ROOT}:/media
-    restart: unless-stopped
+    restart: always
     labels:
       - traefik.enable=true
       #- traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Scheme=https
@@ -579,6 +603,8 @@ services:
       reverse_proxy:
         ipv4_address: 192.168.90.99
       socket_proxy:
+    depends_on:
+      - socket-proxy
     volumes:
       - ./homepage:/app/config
       - /mnt/pool:/mnt/pool:ro
@@ -597,6 +623,8 @@ services:
     networks:
       - reverse_proxy
       - socket_proxy
+    depends_on:
+      - socket-proxy
     command: -H tcp://192.168.91.254:2375
     volumes:
       - /etc/localtime:/etc/localtime:ro
@@ -610,16 +638,16 @@ services:
       - traefik.http.routers.portainer.entrypoints=websecure
       - traefik.http.routers.portainer.tls.certresolver=myresolver
       - traefik.http.services.portainer.loadbalancer.server.port=9000
-    restart: unless-stopped
-    depends_on:
-      - socket-proxy
+    restart: always
   watchtower:
-    image: containrrr/watchtower
+    image: containrrr/watchtower:latest
     container_name: watchtower
-    restart: unless-stopped
+    restart: always
     networks:
       - reverse_proxy
       - socket_proxy
+    depends_on:
+      - socket-proxy
     command: -H tcp://192.168.91.254:2375
     environment:
       - WATCHTOWER_CLEANUP=true
@@ -633,13 +661,15 @@ services:
     networks:
       - reverse_proxy
       - socket_proxy
+    depends_on:
+      - socket-proxy
     environment:
       - AUTOHEAL_CONTAINER_LABEL=all
      # - DOCKER_HOST=tcp://socket-proxy:2375
     command: -H tcp://192.168.91.254:2375
   adguardhome: 
     # filterlist for yt-ads: https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/SmartTV-AGH.txt
-    image: adguard/adguardhome
+    image: adguard/adguardhome:latest
     container_name: adguardhome
     restart: always
     healthcheck:
@@ -650,7 +680,7 @@ services:
       adguardhome:
         ipv4_address: 10.0.0.10
       reverse_proxy:
-        #ipv4_address: 192.168.90.2
+        ipv4_address: 192.168.90.35
     ports:
       - "53:53/tcp"
       - "53:53/udp"
@@ -678,6 +708,7 @@ services:
       networks:
         adguardhome:
         reverse_proxy:
+          ipv4_address: 192.168.90.36
       entrypoint: sh -c '
         apk add jq
         ; while ! [ -e /data/acme.json ]

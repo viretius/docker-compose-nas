@@ -33,7 +33,7 @@ services:
     container_name: immich_machine_learning
     networks: 
       - default
-      - reverse-proxy
+      #- reverse-proxy
     image: ghcr.io/immich-app/immich-machine-learning:v1.132.3
     volumes:
       - immich-model-cache:/cache
@@ -45,7 +45,7 @@ services:
     container_name: immich_redis
     networks: 
       - default
-      - reverse-proxy
+      #- reverse-proxy
     image: public.ecr.aws/docker/library/redis:6.2
     restart: always
     healthcheck:
@@ -57,7 +57,7 @@ services:
     container_name: immich_postgres
     networks: 
       - default
-      - reverse-proxy
+      #- reverse-proxy
     image: ghcr.io/tensorchord/pgvecto-rs:pg14-v0.2.0
     environment:
       POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}

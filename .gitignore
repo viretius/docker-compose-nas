@@ -14,8 +14,6 @@ docker-compose.override.yml
 /bazarr
 /qbittorrent
 /portainer
-/pia
-/pia-shared
 /letsencrypt
 /jellyseerr
 /adguardhome/certs
@@ -23,3 +21,8 @@ docker-compose.override.yml
 /adguardhome/work
 /sabnzbd
 /calibre-web
+/gluetun
+/qbittorrent
+/jellyfin
+/letsencrypt
+/homepage
