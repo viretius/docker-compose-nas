@@ -239,9 +239,6 @@ services:
     security_opt:
       - no-new-privileges:true
     network_mode: "service:gluetun"
-    depends_on:
-      gluetun:
-        condition: service_healthy
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
@@ -621,8 +618,9 @@ services:
     image: portainer/portainer-ce:latest
     container_name: portainer
     networks:
-      - reverse_proxy
-      - socket_proxy
+        reverse_proxy:
+          ipv4_address: 192.168.90.18
+        socket_proxy:
     depends_on:
       - socket-proxy
     command: -H tcp://192.168.91.254:2375
@@ -687,6 +685,7 @@ services:
       - "68:68/tcp"
       - "68:68/udp"
       - "853:853/tcp"
+      - "8089:8089/tcp"   # regular administrative interface
       #- "3000:3000" #dashboard exposed for the first setup
     volumes:
       - ./adguardhome/work:/opt/adguardhome/work
@@ -698,7 +697,7 @@ services:
       - traefik.http.routers.adguardhome.tls=true
       - traefik.http.routers.adguardhome.entrypoints=websecure
       - traefik.http.routers.adguardhome.tls.certresolver=myresolver
-      - traefik.http.services.adguardhome.loadbalancer.server.port=3000
+      - traefik.http.services.adguardhome.loadbalancer.server.port=8089
     profiles:
       - adguardhome
   traefik-certs-dumper:
