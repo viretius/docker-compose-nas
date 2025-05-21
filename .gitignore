@@ -10,12 +10,11 @@ docker-compose.override.yml
 /lidarr
 /bazarr
 /qbittorrent
+/immich
 /portainer
 /letsencrypt
 /jellyseerr
-/adguardhome/certs
-/adguardhome/conf
-/adguardhome/work
+/adguardhome
 /sabnzbd
 /calibre-web
 /gluetun
@@ -24,3 +23,5 @@ docker-compose.override.yml
 /letsencrypt
 /homepage
 /acme.json
+/autoheal
+
