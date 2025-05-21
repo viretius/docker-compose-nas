@@ -21,7 +21,7 @@ services:
     restart: always
     labels:
       - "traefik.enable=true"
-      - traefik.http.routers.immich.rule=Host(`$HOMEPAGE_VAR_IMMICH_DOMAINNAME`)
+      - traefik.http.routers.immich.rule=Host(`immich.${DOMAINNAME}`)
       - "traefik.http.routers.immich.tls=true"
       - "traefik.http.routers.immich.tls.certresolver=myresolver"
       - "traefik.http.services.immich.loadbalancer.server.port=2283"

@@ -101,14 +101,12 @@ services:
       - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
     labels: #dynamic
       - traefik.enable=true
-      - traefik.http.routers.api.rule=Host(`$HOMEPAGE_VAR_TRAEFIK_DOMAINNAME`) # HTTP Router for the dashboard
+      - traefik.http.routers.api.rule=Host(`traefik.${DOMAINNAME}`)  && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))" # HTTP Router for the dashboard
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.tls=true
+      - traefik.http.routers.api.tls.certresolver=myresolver
       - traefik.http.routers.api.service=api@internal
-      - traefik.http.routers.api.middlewares=auth"
-      - traefik.http.middlewares.auth.basicauth.users=micham:$$2a$$12$$H3BPEIS1Vx.436medt8au.6A3VkAWcj7hK/f8dT7s5EKVH5d3vHMG
-      # - traefik.http.routers.api.tls=true
-      # - traefik.http.routers.sonarr.tls.certresolver=myresolver
-      # - traefik.http.routers.api.entrypoints=websecure
-      # - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
+      - traefik.http.services.api.loadbalancer.server.port=80
       # - traefik.http.routers.traefik-dashboard.middlewares=auth"
       # - traefik.http.middlewares.auth.basicauth.users=$(TRAEFIK_USER):$(TRAEFIK_PW)"
       # - traefik.http.routers.traefik-rtr.middlewares=chain-authelia@file" # For Authelia Authentication
@@ -145,7 +143,7 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
-      - traefik.http.routers.sonarr.rule=Host(`$HOMEPAGE_VAR_SONARR_DOMAINNAME`)
+      - traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAINNAME}`)
       - traefik.http.routers.sonarr.entrypoints=websecure
       - traefik.http.routers.sonarr.tls=true
       - traefik.http.routers.sonarr.tls.certresolver=myresolver
@@ -172,7 +170,7 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
-      - traefik.http.routers.radarr.rule=Host(`${HOMEPAGE_VAR_RADARR_DOMAINNAME}`)
+      - traefik.http.routers.radarr.rule=Host(`radarr.${DOMAINNAME}`)
       - traefik.http.routers.radarr.entrypoints=websecure
       - traefik.http.routers.radarr.tls=true
       - traefik.http.routers.radarr.tls.certresolver=myresolver
@@ -199,7 +197,7 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
-      - traefik.http.routers.lidarr.rule=Host(`$HOMEPAGE_VAR_LIDARR_DOMAINNAME`)
+      - traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAINNAME}`)
       - traefik.http.routers.lidarr.tls=true
       - traefik.http.routers.lidarr.entrypoints=websecure
       - traefik.http.routers.lidarr.tls.certresolver=myresolver
@@ -226,7 +224,7 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
-      - traefik.http.routers.bazarr.rule=Host(`$HOMEPAGE_VAR_BAZARR_DOMAINNAME`)
+      - traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAINNAME}`)
       - traefik.http.routers.bazarr.tls=true
       - traefik.http.routers.bazarr.entrypoints=websecure
       - traefik.http.routers.bazarr.tls.certresolver=myresolver
@@ -251,14 +249,14 @@ services:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/ping"]
       interval: 30s
       retries: 10
-    # labels:
-      # prowlarr-dashboard
-      # - traefik.enable=true
-      # - traefik.http.routers.prowlarr.entrypoints=websecure
-      # - traefik.http.routers.prowlarr.rule=Host(`$HOMEPAGE_VAR_PROWLARR_DOMAINNAME`)
-      # - traefik.http.routers.prowlarr.tls=true
-      # - traefik.http.routers.prowlarr.tls.certresolver=myresolver
-      # - traefik.http.services.prowlarr.loadbalancer.server.port=9696
+    labels:
+       - prowlarr-dashboard
+       - traefik.enable=true
+       - traefik.http.routers.prowlarr.entrypoints=websecure
+       - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAINNAME}`)
+       - traefik.http.routers.prowlarr.tls=true
+       - traefik.http.routers.prowlarr.tls.certresolver=myresolver
+       - traefik.http.services.prowlarr.loadbalancer.server.port=http://192.168.90.9:9696
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
@@ -286,7 +284,7 @@ services:
     #  retries: 3
     labels:
       - traefik.enable=true
-      - traefik.http.routers.jellyfin.rule=Host(`$HOMEPAGE_VAR_JELLYFIN_DOMAINNAME`)
+      - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAINNAME}`)
       - traefik.http.routers.jellyfin.entrypoints=websecure
       - traefik.http.routers.jellyfin.tls=true
       - traefik.http.routers.jellyfin.tls.certresolver=myresolver
@@ -320,12 +318,12 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
-      - traefik.http.routers.jellyseerr.rule=Host(`$HOMEPAGE_VAR_JELLYSEERR_DOMAINNAME`)
+      - traefik.http.routers.jellyseerr.rule=Host(`jellyseerr.${DOMAINNAME}`)
       - traefik.http.routers.jellyseerr.tls=true
       - traefik.http.routers.jellyseerr.entrypoints=websecure
       - traefik.http.routers.jellyseerr.tls.certresolver=myresolver
       - traefik.http.services.jellyseerr.loadbalancer.server.port=5055
-  flaresolverr: #bypass Cloudflare and DDoS-GUARD protection
+  flaresolverr: # bypass Cloudflare and DDoS-GUARD protection
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
     networks:
@@ -345,8 +343,8 @@ services:
   sabnzbd:
     image: lscr.io/linuxserver/sabnzbd:latest
     container_name: sabnzbd
-    ports:
-      - "8085:8080"
+    security_opt:
+      - no-new-privileges:true
     networks:
       reverse_proxy:
         ipv4_address: 192.168.90.8
@@ -355,16 +353,16 @@ services:
       - PGID=${GROUP_ID}
       - TZ=${TIMEZONE}
     volumes:
-      - ${CONFIG_ROOT:-.}/sabnzbd:/config
-      - ${DATA_ROOT}:/data
-    restart: always
+      - ${CONFIG_ROOT:-.}/sabnzbd/config:/config
+      - ${DATA_ROOT}/downloads:/data/downloads
+    restart: unless-stopped
     labels:
       - traefik.enable=true
-      - traefik.http.routers.sabnzbd.rule=Host(`$HOMEPAGE_VAR_SABNZBD_DOMAINNAME`)
+      - traefik.http.routers.sabnzbd.rule=Host(`sabnzbd.${DOMAINNAME}`)
       - traefik.http.routers.sabnzbd.tls=true
-      - traefik.http.routers.bazarr.entrypoints=websecure
+      - traefik.http.routers.sabnzbd.entrypoints=websecure
       - traefik.http.routers.sabnzbd.tls.certresolver=myresolver
-      - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
+      - traefik.http.services.sabnzbd.loadbalancer.server.port=8080 # http://192.168.90.8:8080
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
@@ -381,13 +379,20 @@ services:
       - QBITTORRENT_INTERFACE=tun0  # Forces all traffic through VPN interface
       # Port Forwarding Mod (Syncs qBittorrent with Gluetun)
       - DOCKER_MODS=ghcr.io/t-anc/gsp-qbittorent-gluetun-sync-port-mod:main
-      - GSP_GTN_API_KEY=${HOMEPAGE_VAR_GSP_GTN_API_KEY:-randomapikey}  # Gluetun API-key for port forwarding updates
+      - GSP_GTN_API_KEY=${GSP_GTN_API_KEY:-randomapikey}  # Gluetun API-key for port forwarding updates
       - GSP_QBITTORRENT_PORT=${GSP_QBITTORRENT_PORT:-53764}  # Torrenting port (auto-updated by Gluetun)
       - GSP_MINIMAL_LOGS=false  # Enables full logs for debugging purposes
     volumes:
       - ./qbittorrent/config:/config
       - ${CONFIG_ROOT:-.}/gluetun:/gluetun
       - ${DOWNLOAD_ROOT}:/data/torrents
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.${DOMAINNAME}`)
+      - traefik.http.routers.qbittorrent.entrypoints=websecure
+      - traefik.http.routers.qbittorrent.tls=true
+      - traefik.http.routers.qbittorrent.tls.certresolver=myresolver
+      - traefik.http.services.qbittorrent.loadbalancer.server.port=http://192.168.90.9:8081
     # ─── Performance Optimization ──────────────────────────────────────
     ulimits:
       nofile:
@@ -409,7 +414,6 @@ services:
     #image: qmcgaw/gluetun:v3.39.0 # Pinned to this version to avoid issues in v3.40+ specific to protonvpn
     image: ghcr.io/qdm12/gluetun
     container_name: gluetun
-    stdin_open: true
     security_opt:
       - no-new-privileges:true
     cap_add:
@@ -418,6 +422,8 @@ services:
       reverse_proxy:
         ipv4_address:
           192.168.90.9
+    ports:
+      - "8081:8080" # http
     devices:
       - /dev/net/tun:/dev/net/tun
     secrets:
@@ -428,18 +434,8 @@ services:
       - ${CONFIG_ROOT:-.}/qbittorent/active:/active
       - ${CONFIG_ROOT:-.}/traefik/acme/:/acme
       - ./gluetun/config.toml:/gluetun/auth/config.toml
-    ports:
-      - 8081:8080      # Exposing QBittorrent-dashboard through Docker Host LAN IP  
-      #- 9696:9696      # Prowlarr
-      #- 8778:8888/tcp  # HTTP proxy (e.g. privoxy)
-      #- 8388:8388/tcp  # Shadowsocks
-      #- 8388:8388/udp  # Shadowsocks
-      #- 8000:8000/tcp  # GT Control Server (api to update listening-port), not needed, since the mod is running in a container with network_mode: "service:gluetun"
-      - 6881:6881      # QB for active P2P
-      - 6881:6881/udp  # QB for active P2P
     environment:
-      # - HEALTH_VPN_DURATION_INITIAL=15s # https://airvpn.org/forums/topic/63708-gluetun-port-forwarding-works-for-an-hour/
-      # - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data "json={\"listen_port\":{{PORTS}}}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'
+      - HEALTH_VPN_DURATION_INITIAL=7s # https://airvpn.org/forums/topic/63708-gluetun-port-forwarding-works-for-an-hour/
       - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER:-protonvpn}
       - VPN_TYPE=wireguard
       - VPN_PORT_FORWARDING=on
@@ -447,10 +443,11 @@ services:
       - TZ=${TIMEZONE}
       # WIREGUARD SETTINGS
       - WIREGUARD_PRIVATE_KEY_FILE=/run/secrets/wireguard_private_key
-      - SERVER_COUNTRIES=Netherlands,Denmark,Sweden,Finland
-      - LOG_LEVEL=warn
+      - WIREGUARD_PUBLIC_KEY=${VPN_WIREGUARD_PUBLIC_KEY:-randompublickey}
+      - SERVER_COUNTRIES=Netherlands,switzerland
+      - LOG_LEVEL=debug
       - UPDATER_PERIOD=24h #update vpn-serverstats (ips, keys,...)
-      - FIREWALL_OUTBOUND_SUBNETS=192.168.90.0/24,172.17.0.0/24,172.19.0.0/24 # let qbittorrent communicate with other services in the lokal network
+      - FIREWALL_OUTBOUND_SUBNETS=192.168.90.0/24,192.168.178.0/24 # Allow local network access (traefik)
       #- DOT_PROVIDERS=cloudflare,google #dns-over-tls
       #In qbittorrent, make sure you check Bypass authentication for clients on localhost, 
       #then you don't need to worry about passing auth into the port manager container. 
@@ -480,29 +477,9 @@ services:
     environment:
       - TZ=${TIMEZONE}
       - UN_SONARR_0_URL=http://192.168.90.10:8989
-      - UN_SONARR_0_API_KEY=${HOMEPAGE_VAR_SONARR_API_KEY}
+      - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
       - UN_RADARR_0_URL=http://192.168.90.20:7878
-      - UN_RADARR_0_API_KEY=${HOMEPAGE_VAR_RADARR_API_KEY}
-  #sabnzbd:
-   # image: lscr.io/linuxserver/sabnzbd:latest
-   # container_name: sabnzbd
-   # networks:
-   #   - reverse_proxy
-   # environment:
-    #  - PUID=${USER_ID}
-    #  - PGID=${GROUP_ID}
-    #  - TZ=${TIMEZONE}
-   # volumes:
-    #  - ${CONFIG_ROOT:-.}/sabnzbd:/config
-     # - ${DATA_ROOT}:/data
-   # restart: always
-   # labels:
-     # - traefik.enable=true
-     # - traefik.http.routers.sabnzbd.rule=Host(`$HOMEPAGE_VAR_SABNZBD_DOMAINNAME`)
-     # - traefik.http.routers.sabnzbd.entrypoints=websecure
-     # - traefik.http.routers.sabnzbd.tls=true
-     # - traefik.http.routers.sabnzbd.tls.certresolver=myresolver
-      #- traefik.http.services.sabnzbd.loadbalancer.server.port=8080
+      - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
   calibre-web: #ebooks
     image: lscr.io/linuxserver/calibre-web:latest
     container_name: calibre-web
@@ -524,10 +501,28 @@ services:
       #- traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Script-Name=/calibre
       #- traefik.http.middlewares.calibre-stripprefixregex.stripPrefixRegex.regex=/calibre
       #- traefik.http.routers.calibre.middlewares=calibre-headers,calibre-stripprefixregex
-      - traefik.http.routers.calibre.rule=Host(`${HOMEPAGE_VAR_CALIBRE_DOMAINNAME}`)
+      - traefik.http.routers.calibre.rule=Host(`calibre.${DOMAINNAME}`)
       - traefik.http.routers.calibre.tls=true
       - traefik.http.routers.calibre.tls.certresolver=myresolver
       - traefik.http.services.calibre.loadbalancer.server.port=8083
+  umlautadaptarr:
+    image: pcjones/umlautadaptarr:latest
+    container_name: umlautadaptarr
+    restart: unless-stopped
+    networks:
+      reverse_proxy:
+        ipv4_address: 192.168.90.2
+    environment:
+      - TZ=${TIMEZONE}
+      - SONARR__ENABLED=true
+      - SONARR__HOST=http://sonarr:8989
+      - SONARR__APIKEY=${SONARR_API_KEY}
+      - RADARR__ENABLED=true
+      - RADARR__HOST=http://radarr:7878
+      - RADARR__APIKEY=${RADARR_API_KEY}
+      - LIDARR__ENABLED=false
+      - LIDARR__HOST=http://lidarr:8686
+      - LIDARR__APIKEY=${LIDARR_API_KEY}
   decluttarr:
     image: ghcr.io/manimatter/decluttarr:latest
     container_name: decluttarr
@@ -538,12 +533,12 @@ services:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
       - TZ=${TIMEZONE}
-      - RADARR_URL=${HOMEPAGE_VAR_RADARR_DOMAINNAME}
-      - RADARR_KEY=${HOMEPAGE_VAR_RADARR_API_KEY}
-      - SONARR_URL=${HOMEPAGE_VAR_SONARR_DOMAINNAME}
-      - SONARR_KEY=${HOMEPAGE_VAR_SONARR_API_KEY}
-      - LIDARR_URL=${HOMEPAGE_VAR_LIDARR_DOMAINNAME}
-      - LIDARR_KEY=${HOMEPAGE_VAR_LIDARR_API_KEY}
+      - RADARR_URL=http://radarr:7878
+      - RADARR_KEY=${RADARR_API_KEY}
+      - SONARR_URL=http://sonarr:8989
+      - SONARR_KEY=${SONARR_API_KEY}
+      - LIDARR_URL=http://lidarr:8686
+      - LIDARR_KEY=${LIDARR_API_KEY}
       - QBITTORRENT_URL=http://192.168.90.9:8081/
       - LOG_LEVEL=${DECLUTTARR_LOG_LEVEL:-INFO}
       - TEST_RUN=${DECLUTTARR_TEST_RUN:-False}
@@ -565,37 +560,8 @@ services:
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
-    environment:
-      - HOMEPAGE_ALLOWED_HOSTS=* #allow all, because homepage wont be exposed to the internet, ${HOMEPAGE_DOMAINNAME},192.168.90.250,192.168.178.22:3030 #no spaces between values!
-      - PORT=3030 #change default listening port, because adguard uses the same
-      - HOMEPAGE_VAR_PORTAINER_DOMAINNAME=${HOMEPAGE_VAR_PORTAINER_DOMAINNAME}
-      -  HOMEPAGE_VAR_TRAEFIK_DOMAINNAME=${HOMEPAGE_VAR_TRAEFIK_DOMAINNAME}
-      -  HOMEPAGE_VAR_ADGUARD_DOMAINNAME=${HOMEPAGE_VAR_ADGUARD_DOMAINNAME}
-      -  HOMEPAGE_VAR_FLARESOLVERR_DOMAINNAME=${HOMEPAGE_VAR_FLARESOLVERR_DOMAINNAME}
-      -  HOMEPAGE_VAR_CALIBRE_DOMAINNAME=${HOMEPAGE_VAR_CALIBRE_DOMAINNAME}
-      -  HOMEPAGE_VAR_SABNZBD_DOMAINNAME=${HOMEPAGE_VAR_SABNZBD_DOMAINNAME}
-      -  HOMEPAGE_VAR_PROWLARR_DOMAINNAME=${HOMEPAGE_VAR_PROWLARR_DOMAINNAME}
-      -  HOMEPAGE_VAR_SONARR_DOMAINNAME=${HOMEPAGE_VAR_SONARR_DOMAINNAME}
-      -  HOMEPAGE_VAR_SONARR_ANIME_DOMAINNAME=${HOMEPAGE_VAR_SONARR_ANIME_DOMAINNAME}
-      -  HOMEPAGE_VAR_RADARR_DOMAINNAME=${HOMEPAGE_VAR_RADARR_DOMAINNAME}
-      -  HOMEPAGE_VAR_LIDARR_DOMAINNAME=${HOMEPAGE_VAR_LIDARR_DOMAINNAME}
-      -  HOMEPAGE_VAR_BAZARR_DOMAINNAME=${HOMEPAGE_VAR_BAZARR_DOMAINNAME}
-      -  HOMEPAGE_VAR_IMMICH_DOMAINNAME=${HOMEPAGE_VAR_IMMICH_DOMAINNAME}
-      -  HOMEPAGE_VAR_JELLYSEERR_DOMAINNAME=${HOMEPAGE_VAR_JELLYSEERR_DOMAINNAME}
-      -  HOMEPAGE_VAR_JELLYFIN_DOMAINNAME=${HOMEPAGE_VAR_JELLYFIN_DOMAINNAME}
-
-        
-      -  HOMEPAGE_VAR_TITLE=${HOMEPAGE_VAR_TITLE}
-      -  HOMEPAGE_VAR_LIDARR_API_KEY=${HOMEPAGE_VAR_LIDARR_API_KEY}
-      -  HOMEPAGE_VAR_BAZARR_API_KEY=${HOMEPAGE_VAR_BAZARR_API_KEY}
-      -  HOMEPAGE_VAR_SABNZBD_API_KEY=${HOMEPAGE_VAR_SABNZBD_API_KEY}
-      -  HOMEPAGE_VAR_IMMICH_API_KEY=${HOMEPAGE_VAR_IMMICH_API_KEY}
-      -  HOMEPAGE_VAR_SONARR_API_KEY=${HOMEPAGE_VAR_SONARR_API_KEY}
-      -  HOMEPAGE_VAR_RADARR_API_KEY=${HOMEPAGE_VAR_RADARR_API_KEY}
-      -  HOMEPAGE_VAR_GSP_GTN_API_KEY=${HOMEPAGE_VAR_GSP_GTN_API_KEY}
-      -  HOMEPAGE_VAR_JELLYSEERR_API_KEY=${HOMEPAGE_VAR_JELLYSEERR_API_KEY}
-      -  HOMEPAGE_VAR_JELLYFIN_API_KEY=${HOMEPAGE_VAR_JELLYFIN_API_KEY}
-      -  HOMEPAGE_VAR_WEATHER_API_KEY=${HOMEPAGE_VAR_WEATHER_API_KEY}
+    env_file:
+     - ./homepage/.env
     networks: 
       reverse_proxy:
         ipv4_address: 192.168.90.99
@@ -609,11 +575,14 @@ services:
     command: ["node", "server.js", "-H", "tcp://192.168.91.254:2375"]
     labels:
       - traefik.enable=true
-      - traefik.http.routers.homepage.rule=Host(`$HOMEPAGE_DOMAINNAME`) 
+      - traefik.http.routers.homepage.rule=Host(`homepage.${DOMAINNAME}`)
       - traefik.http.routers.homepage.entrypoints=websecure
       - traefik.http.routers.homepage.tls=true
       - traefik.http.routers.homepage.tls.certresolver=myresolver
       - traefik.http.services.homepage.loadbalancer.server.port=3030
+  
+### 
+
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
@@ -631,12 +600,42 @@ services:
       - TZ=$TIMEZONE
     labels:
       - traefik.enable=true
-      - traefik.http.routers.portainer.rule=Host(`$HOMEPAGE_VAR_PORTAINER_DOMAINNAME`)
+      - traefik.http.routers.portainer.rule=Host(`portainer.${DOMAINNAME}`)
       - traefik.http.routers.portainer.tls=true #not used according to official documentation
       - traefik.http.routers.portainer.entrypoints=websecure
       - traefik.http.routers.portainer.tls.certresolver=myresolver
       - traefik.http.services.portainer.loadbalancer.server.port=9000
     restart: always
+  scrutiny:
+    image: lscr.io/linuxserver/scrutiny:latest
+    container_name: scrutiny
+    networks: 
+      reverse_proxy:
+        ipv4_address: 192.168.90.91
+    cap_add:
+      - SYS_RAWIO
+      # - SYS_ADMIN #optional for nvme drives (upstream issue)
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TIMEZONE}
+      - SCRUTINY_API_ENDPOINT=http://scrutiny:8080
+      - SCRUTINY_WEB=true
+      - SCRUTINY_COLLECTOR=true
+    volumes:
+      - ./scrutiny/config:/opt/scrutiny/config
+      - /run/udev:/run/udev:ro
+    #ports:
+     # - 8089:8080
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.scrutiny.rule=Host(`scrutiny.${DOMAINNAME}`)
+      - traefik.http.routers.scrutiny.tls=true
+      - traefik.http.routers.scrutiny.entrypoints=websecure
+      - traefik.http.routers.scrutiny.tls.certresolver=myresolver
+      - traefik.http.services.scrutiny.loadbalancer.server.port=8080
+
   watchtower:
     image: containrrr/watchtower:latest
     container_name: watchtower
@@ -671,7 +670,7 @@ services:
     container_name: adguardhome
     restart: always
     healthcheck:
-      test: ["CMD", "wget", "http://127.0.0.1:3000", "-qO", "/dev/null"]
+      test: ["CMD", "wget", "http://10.0.0.10", "-qO", "/dev/null"]
       interval: 30s
       retries: 10
     networks:
@@ -685,19 +684,17 @@ services:
       - "68:68/tcp"
       - "68:68/udp"
       - "853:853/tcp"
-      - "8089:8089/tcp"   # regular administrative interface
-      #- "3000:3000" #dashboard exposed for the first setup
     volumes:
       - ./adguardhome/work:/opt/adguardhome/work
       - ./adguardhome/conf:/opt/adguardhome/conf
       - ./adguardhome/certs:/opt/adguardhome/certs
     labels:
       - traefik.enable=true
-      - traefik.http.routers.adguardhome.rule=Host(`$HOMEPAGE_VAR_ADGUARD_DOMAINNAME`)
+      - traefik.http.routers.adguardhome.rule=Host(`dns.${DOMAINNAME}`)
       - traefik.http.routers.adguardhome.tls=true
       - traefik.http.routers.adguardhome.entrypoints=websecure
       - traefik.http.routers.adguardhome.tls.certresolver=myresolver
-      - traefik.http.services.adguardhome.loadbalancer.server.port=8089
+      - traefik.http.services.adguardhome.loadbalancer.server.port=80
     profiles:
       - adguardhome
   traefik-certs-dumper:

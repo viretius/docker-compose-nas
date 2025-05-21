@@ -3,10 +3,7 @@
 docker-compose.override.yml
 /secrets
 /@docker
-/homepage/logs
-/homepage/*.yaml
-/homepage/*.css
-/homepage/*.js
+/homepage
 /sonarr
 /radarr
 /prowlarr
