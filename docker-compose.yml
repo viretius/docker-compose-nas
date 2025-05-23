@@ -101,7 +101,7 @@ services:
       - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
     labels: #dynamic
       - traefik.enable=true
-      - traefik.http.routers.api.rule=Host(`traefik.${DOMAINNAME}`)  && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))" # HTTP Router for the dashboard
+      - traefik.http.routers.api.rule=Host(`traefik.${DOMAINNAME}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))" # HTTP Router for the dashboard
       - traefik.http.routers.api.entrypoints=websecure
       - traefik.http.routers.api.tls=true
       - traefik.http.routers.api.tls.certresolver=myresolver
@@ -256,7 +256,7 @@ services:
        - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAINNAME}`)
        - traefik.http.routers.prowlarr.tls=true
        - traefik.http.routers.prowlarr.tls.certresolver=myresolver
-       - traefik.http.services.prowlarr.loadbalancer.server.port=http://192.168.90.9:9696
+       - traefik.http.services.prowlarr.loadbalancer.server.url=http://192.168.90.9:9696
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
@@ -270,6 +270,8 @@ services:
       - PGID=${GROUP_ID}
       - TZ=${TIMEZONE}
       - JELLYFIN_PublishedServerUrl=https://jellyfin.kingsmanlab.com
+      - JELLYFIN_FFmpeg__probesize=3000000000 # default is 1000000
+      - JELLYFIN_FFmpeg__analyzeduration=500000000 # default is 20000000
     volumes:
       - ${CONFIG_ROOT:-.}/jellyfin:/config
       - ${MEDIA_ROOT}:/data/media
@@ -392,7 +394,7 @@ services:
       - traefik.http.routers.qbittorrent.entrypoints=websecure
       - traefik.http.routers.qbittorrent.tls=true
       - traefik.http.routers.qbittorrent.tls.certresolver=myresolver
-      - traefik.http.services.qbittorrent.loadbalancer.server.port=http://192.168.90.9:8081
+      - traefik.http.services.qbittorrent.loadbalancer.server.url=http://192.168.90.9:8081
     # ─── Performance Optimization ──────────────────────────────────────
     ulimits:
       nofile:
@@ -511,7 +513,7 @@ services:
     restart: unless-stopped
     networks:
       reverse_proxy:
-        ipv4_address: 192.168.90.2
+        ipv4_address: 192.168.90.200
     environment:
       - TZ=${TIMEZONE}
       - SONARR__ENABLED=true
