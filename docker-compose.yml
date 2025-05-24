@@ -257,6 +257,29 @@ services:
        - traefik.http.routers.prowlarr.tls=true
        - traefik.http.routers.prowlarr.tls.certresolver=myresolver
        - traefik.http.services.prowlarr.loadbalancer.server.url=http://192.168.90.9:9696
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    networks: 
+      reverse_proxy:
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+      - VERSION=docker
+    volumes:
+      - ./plex/config:/config
+      - ${MEDIA_ROOT}:/data/media
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri # for hardware transcoding
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.plex.rule=Host(`plex.${DOMAINNAME}`)
+      - traefik.http.routers.plex.tls=true
+      - traefik.http.routers.plex.entrypoints=websecure
+      - traefik.http.routers.plex.tls.certresolver=myresolver
+      - traefik.http.services.plex.loadbalancer.server.port=32400 # Plex Web UI port
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
@@ -385,8 +408,7 @@ services:
       - GSP_QBITTORRENT_PORT=${GSP_QBITTORRENT_PORT:-53764}  # Torrenting port (auto-updated by Gluetun)
       - GSP_MINIMAL_LOGS=false  # Enables full logs for debugging purposes
     volumes:
-      - ./qbittorrent/config:/config
-      - ${CONFIG_ROOT:-.}/gluetun:/gluetun
+      - ${CONFIG_ROOT:-.}/qbittorrent/config:/config
       - ${DOWNLOAD_ROOT}:/data/torrents
     labels:
       - traefik.enable=true
@@ -424,18 +446,15 @@ services:
       reverse_proxy:
         ipv4_address:
           192.168.90.9
-    ports:
-      - "8081:8080" # http
+    # ports:
+     # - "8081:8080" # http
     devices:
       - /dev/net/tun:/dev/net/tun
     secrets:
       - wireguard_private_key
     volumes:
-      - ${CONFIG_ROOT:-.}/gluetun:/gluetun #store cpn-config persistently
-      - ${CONFIG_ROOT:-.}/qbittorent/config:/config
-      - ${CONFIG_ROOT:-.}/qbittorent/active:/active
-      - ${CONFIG_ROOT:-.}/traefik/acme/:/acme
-      - ./gluetun/config.toml:/gluetun/auth/config.toml
+      - ./gluetun:/gluetun #store cpn-config persistently
+      - ./gluetun/config:/gluetun/config
     environment:
       - HEALTH_VPN_DURATION_INITIAL=7s # https://airvpn.org/forums/topic/63708-gluetun-port-forwarding-works-for-an-hour/
       - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER:-protonvpn}
@@ -465,7 +484,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: always   
+    restart: unless-stopped   
   unpackerr:
     image: ghcr.io/unpackerr/unpackerr:latest
     container_name: unpackerr
