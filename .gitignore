@@ -24,4 +24,6 @@ docker-compose.override.yml
 /homepage
 /acme.json
 /autoheal
+/traefik/users
+/traefik/acme
 
