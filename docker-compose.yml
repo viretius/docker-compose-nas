@@ -262,6 +262,8 @@ services:
     container_name: plex
     networks: 
       reverse_proxy:
+    ports:
+      - 32400:32400 # tv app not working with https://plex.domain.com 
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
