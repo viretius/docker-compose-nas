@@ -270,6 +270,7 @@ services:
       - TZ=${TIMEZONE}
       - VERSION=docker
     volumes:
+      - ./plex/Transcode:/Transcode
       - ./plex/config:/config
       - ${MEDIA_ROOT}:/data/media
     restart: unless-stopped
