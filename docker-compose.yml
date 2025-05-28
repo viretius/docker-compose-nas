@@ -86,7 +86,7 @@ services:
       - --ping=true
       - --api=true
       - --api.dashboard=true
-      - --api.insecure=true
+      # - --api.insecure=true
 
       - --providers.docker=true
       - --serversTransport.insecureSkipVerify=true # Skip TLS verification for Docker socket
@@ -117,14 +117,11 @@ services:
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
     labels:
       - traefik.enable=true
-      - traefik.http.routers.traefik.rule=Host(`traefik.${DOMAINNAME}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+      - traefik.http.routers.traefik.rule=Host(`traefik.${DOMAINNAME}`)
       - traefik.http.routers.traefik.entrypoints=websecure
-      - traefik.http.routers.traefik.tls=true
-      - traefik.http.routers.traefik.tls.certresolver=letsencrypt
       - traefik.http.routers.traefik.service=api@internal
       - traefik.http.routers.traefik.middlewares=auth
       - traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_CREDENTIALS}
-      - traefik.http.services.api@internal.loadbalancer.server.port=443 # Traefik dashboard port
 
     volumes:
       - ${CONFIG_ROOT:-.}/letsencrypt/:/letsencrypt # Store Let's Encrypt certificates persistently
@@ -135,7 +132,7 @@ services:
       - socket-proxy
 
     healthcheck:
-      test: ["CMD", traefik", "healthcheck", "--ping"]
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
       retries: 10
   sonarr:
@@ -211,7 +208,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAINNAME}`)
-      - traefik.http.routers.lidarr.tls=true
+      - traefik.http.routers.lidarr.entrypoints=websecure
       - traefik.http.services.lidarr.loadbalancer.server.port=8686
   bazarr:
     image: lscr.io/linuxserver/bazarr
@@ -236,8 +233,28 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAINNAME}`)
-      - traefik.http.routers.bazarr.tls=true
+      - traefik.http.routers.bazarr.entrypoints=websecure
       - traefik.http.services.bazarr.loadbalancer.server.port=6767
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    networks: 
+      reverse_proxy:
+        ipv4_address: 192.168.90.41
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/readarr/config:/config
+      - ${DATA_ROOT}:/data
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.readarr.rule=Host(`readarr.${DOMAINNAME}`)
+      - traefik.http.routers.readarr.entrypoints=websecure
+      - traefik.http.services.readarr.loadbalancer.server.port=8787
+
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
@@ -286,7 +303,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.plex.rule=Host(`plex.${DOMAINNAME}`)
-      - traefik.http.routers.plex.tls=true
+      - traefik.http.routers.plex.entrypoints=websecure
       - traefik.http.services.plex.loadbalancer.server.port=32400 # Plex Web UI port
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
@@ -350,7 +367,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.jellyseerr.rule=Host(`jellyseerr.${DOMAINNAME}`)
-      - traefik.http.routers.jellyseerr.tls=true
+      - traefik.http.routers.jellyseerr.entrypoints=websecure
       - traefik.http.services.jellyseerr.loadbalancer.server.port=5055
   flaresolverr: # bypass Cloudflare and DDoS-GUARD protection
     image: ghcr.io/flaresolverr/flaresolverr:latest
@@ -388,7 +405,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.sabnzbd.rule=Host(`sabnzbd.${DOMAINNAME}`)
-      - traefik.http.routers.sabnzbd.tls=true
+      - traefik.http.routers.sabnzbd.entrypoints=websecure
       - traefik.http.services.sabnzbd.loadbalancer.server.port=8080 # http://192.168.90.8:8080
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
@@ -518,12 +535,14 @@ services:
     restart: always
     labels:
       - traefik.enable=true
+      - traefik.http.routers.calibre.entrypoints=websecure
       #- traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Scheme=https
       #- traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Script-Name=/calibre
       #- traefik.http.middlewares.calibre-stripprefixregex.stripPrefixRegex.regex=/calibre
       #- traefik.http.routers.calibre.middlewares=calibre-headers,calibre-stripprefixregex
       - traefik.http.routers.calibre.rule=Host(`calibre.${DOMAINNAME}`)
       - traefik.http.services.calibre.loadbalancer.server.port=8083
+
   umlautadaptarr:
     image: pcjones/umlautadaptarr:latest
     container_name: umlautadaptarr
@@ -618,36 +637,9 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.portainer.rule=Host(`portainer.${DOMAINNAME}`)
-      - traefik.http.routers.portainer.tls=true #not used according to official documentation
+      - traefik.http.routers.portainer.entrypoints=websecure
       - traefik.http.services.portainer.loadbalancer.server.port=9000
     restart: always
-  scrutiny:
-    image: lscr.io/linuxserver/scrutiny:latest
-    container_name: scrutiny
-    networks: 
-      reverse_proxy:
-        ipv4_address: 192.168.90.91
-    cap_add:
-      - SYS_RAWIO
-      # - SYS_ADMIN #optional for nvme drives (upstream issue)
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=${TIMEZONE}
-      - SCRUTINY_API_ENDPOINT=http://scrutiny:8080
-      - SCRUTINY_WEB=true
-      - SCRUTINY_COLLECTOR=true
-    volumes:
-      - ./scrutiny/config:/opt/scrutiny/config
-      - /run/udev:/run/udev:ro
-    #ports:
-     # - 8089:8080
-    restart: unless-stopped
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.scrutiny.rule=Host(`scrutiny.${DOMAINNAME}`)
-      - traefik.http.routers.scrutiny.tls=true
-      - traefik.http.services.scrutiny.loadbalancer.server.port=8080
 
   watchtower:
     image: containrrr/watchtower:latest
@@ -705,7 +697,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.adguardhome.rule=Host(`dns.${DOMAINNAME}`)
-      - traefik.http.routers.adguardhome.tls=true
+      - traefik.http.routers.adguardhome.entrypoints=websecure
       - traefik.http.services.adguardhome.loadbalancer.server.port=80
   traefik-certs-dumper:
       image: ghcr.io/ldez/traefik-certs-dumper:latest
@@ -763,10 +755,6 @@ networks:
         - subnet: 192.168.90.0/24 
 
 secrets:
-  porkbun_api_key:
-    file: ./secrets/porkbun_api_key.secret
-  porkbun_secret_api_key:
-    file: ./secrets/porkbun_secret_api_key.secret
   cloudflare_dns_api_token:
     file: ./secrets/cloudflare_dns_api_token.secret
   cloudflare_zone_api_token:
